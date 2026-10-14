@@ -2173,13 +2173,52 @@ async function boot() {
 boot().catch(err => { console.error(err); toast('Ralat semasa memulakan aplikasi.', 'error'); });
 })();
 
-if ('serviceWorker' in navigator) {
+</script>
+<script>
+  // 1. Daftarkan Service Worker
+  if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
-        .then((reg) => console.log('PWA Service Worker berjaya didaftarkan!', reg.scope))
+        .then((reg) => console.log('PWA Service Worker berjaya didaftarkan!'))
         .catch((err) => console.error('Pendaftaran Service Worker gagal:', err));
     });
   }
+
+  // 2. Logik untuk Butang "Pasang ke Desktop"
+  let deferredPrompt;
+  const installBtn = document.getElementById('pwaInstallBtn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Sokong pelayar web supaya tidak tunjuk prompt asal secara automatik
+    e.preventDefault();
+    // Simpan acara (event) untuk digunakan kemudian
+    deferredPrompt = e;
+    // Tunjukkan butang buatan kita kepada pengguna
+    installBtn.style.display = 'block';
+
+    installBtn.addEventListener('click', () => {
+      // Sembunyikan semula butang selepas diklik
+      installBtn.style.display = 'none';
+      // Paparkan prompt pasang (installation prompt)
+      deferredPrompt.prompt();
+      // Tunggu maklum balas daripada pengguna
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('Pengguna bersetuju memasang PWA');
+        } else {
+          console.log('Pengguna menolak pemasangan PWA');
+        }
+        deferredPrompt = null;
+      });
+    });
+  });
+
+  // Sembunyikan butang jika aplikasi sudah pun dipasang
+  window.addEventListener('appinstalled', () => {
+    console.log('PWA berjaya dipasang ke peranti!');
+    installBtn.style.display = 'none';
+  });
 </script>
+
 </body>
 </html>
