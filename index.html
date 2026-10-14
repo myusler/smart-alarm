@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="ms" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050816">
+<meta name="description" content="Personal Smart Alarm — penggera pintar dengan muzik sendiri, berjalan sepenuhnya dalam pelayar anda.">
+<title>Personal Smart Alarm</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%8F%B0%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --page:radial-gradient(1200px 700px at 12% -10%,#12246a 0%,transparent 60%),radial-gradient(900px 600px at 100% 8%,#2b1259 0%,transparent 55%),linear-gradient(180deg,#050816,#0a1030 60%,#070b22);
+  --card:rgba(16,24,58,.55);--card-b:rgba(125,160,255,.18);--card-solid:#0d1538;
+  --text:#e8eeff;--muted:#93a0c8;--accent:#3b82f6;--cyan:#22d3ee;--purple:#a855f7;
+  --danger:#ff5a5f;--ok:#34d399;--warn:#fbbf24;--input:rgba(255,255,255,.06);
+  --glow:0 0 22px rgba(59,130,246,.5);--shadow:0 12px 40px rgba(0,0,0,.38);
+  --clock:linear-gradient(90deg,#22d3ee,#3b82f6 55%,#a855f7);
+  --opt-bg:#0b1233;color-scheme:dark;
+}
+[data-theme="light"]{
+  --page:radial-gradient(1000px 600px at 10% -10%,#cfe0ff 0%,transparent 60%),radial-gradient(800px 500px at 100% 5%,#e6d6ff 0%,transparent 55%),linear-gradient(180deg,#f3f6ff,#e6edff);
+  --card:rgba(255,255,255,.72);--card-b:rgba(60,90,200,.16);--card-solid:#ffffff;
+  --text:#10173a;--muted:#56628c;--accent:#2563eb;--cyan:#0891b2;--purple:#7c3aed;
+  --input:rgba(20,40,120,.06);--glow:0 0 18px rgba(37,99,235,.25);--shadow:0 12px 34px rgba(40,60,140,.15);
+  --clock:linear-gradient(90deg,#0891b2,#2563eb 55%,#7c3aed);--opt-bg:#ffffff;color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;background:var(--page);background-attachment:fixed;color:var(--text);-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+body.no-scroll{overflow:hidden}
+.is-hidden{display:none!important}
+button{font-family:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+select option{background:var(--opt-bg);color:var(--text)}
+#bgCanvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* layout */
+.layout{position:relative;z-index:1;min-height:100vh}
+.sidebar{display:none}
+.content{max-width:1180px;margin:0 auto;padding:16px 16px 120px}
+.mobile-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--card-b)}
+.bottom-nav .nav-btn{flex-direction:column;gap:2px;font-size:.7rem;min-height:56px;padding:6px 2px;justify-content:center}
+@media(min-width:768px){
+  .layout{display:flex}
+  .sidebar{display:flex;flex-direction:column;width:270px;flex:none;position:sticky;top:0;height:100vh;padding:24px 18px;border-right:1px solid var(--card-b);background:var(--card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .content{flex:1;min-width:0;padding:32px 36px 48px}
+  .bottom-nav,.mobile-head{display:none}
+}
+.grid-2{display:grid;gap:20px;grid-template-columns:1fr}
+.grid-3{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:1024px){.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:2fr 1fr}}
+.actions-grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:768px){.actions-grid{grid-template-columns:repeat(4,1fr)}}
+
+/* components */
+.glass{background:var(--card);border:1px solid var(--card-b);border-radius:24px;backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.06)}
+.p-card{padding:20px}
+@media(min-width:768px){.p-card{padding:26px}}
+.card-title{font-size:1.05rem;font-weight:700;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+.page-title{font-size:1.7rem;font-weight:700;margin:0}
+.page-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.brand{display:flex;align-items:center;gap:12px}
+.brand b{display:block;font-size:1rem;line-height:1.2}
+.brand small{color:var(--muted);font-size:.75rem}
+.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--purple));box-shadow:var(--glow);color:#fff;flex:none}
+.nav-btn{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:14px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:600;font-size:.95rem;transition:.2s;text-align:left}
+.nav-btn:hover{background:var(--input);color:var(--text)}
+.nav-btn.active{color:var(--text);background:linear-gradient(135deg,rgba(59,130,246,.25),rgba(168,85,247,.2));border-color:var(--card-b);box-shadow:var(--glow)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:14px;border:1px solid var(--card-b);background:var(--input);font-weight:600;font-size:.95rem;transition:transform .15s,box-shadow .2s,background .2s}
+.btn:hover:not(:disabled){transform:translateY(-1px);background:rgba(125,160,255,.16)}
+.btn:active:not(:disabled){transform:translateY(0) scale(.98)}
+.btn-primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#2563eb,#06b6d4 60%,#8b5cf6);box-shadow:var(--glow)}
+.btn-primary:hover:not(:disabled){background:linear-gradient(135deg,#3b82f6,#22d3ee 60%,#a855f7)}
+.btn-danger{border-color:transparent;color:#fff;background:linear-gradient(135deg,#ff5a5f,#e11d48)}
+.btn-danger:hover:not(:disabled){background:linear-gradient(135deg,#ff7377,#f43f5e)}
+.btn-sm{min-height:38px;padding:0 12px;font-size:.85rem;border-radius:12px}
+.btn-icon{min-height:42px;width:42px;padding:0;border-radius:12px}
+.btn-block{width:100%}
+.btn svg,.nav-btn svg{width:18px;height:18px;flex:none}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:.78rem;font-weight:600;border:1px solid var(--card-b);background:var(--input)}
+.chip svg{width:14px;height:14px}
+.chip-ok{color:var(--ok);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.1)}
+.chip-warn{color:var(--warn);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.1)}
+.chip-info{color:var(--cyan);border-color:rgba(34,211,238,.35);background:rgba(34,211,238,.08)}
+.chip-idle{color:var(--muted)}
+.status-row{padding:12px 0;border-bottom:1px dashed var(--card-b)}
+.status-row:last-child{border-bottom:0}
+.status-row p{margin:6px 0 0;font-size:.82rem;color:var(--muted)}
+.notice{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:16px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.08);font-size:.88rem;line-height:1.5}
+.notice svg{width:20px;height:20px;flex:none;color:var(--warn);margin-top:2px}
+.notice.info{border-color:rgba(34,211,238,.35);background:rgba(34,211,238,.07)}
+.notice.info svg{color:var(--cyan)}
+.field{display:block;margin-bottom:14px}
+.field>span.fl{display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:6px}
+.input{width:100%;min-height:48px;padding:10px 14px;border-radius:14px;border:1px solid var(--card-b);background:var(--input);color:var(--text);font:inherit;font-size:1rem}
+textarea.input{min-height:80px;resize:vertical}
+.input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.2)}
+input[type=range]{width:100%;accent-color:var(--cyan);height:28px;cursor:pointer;background:transparent}
+.range-row{display:flex;align-items:center;gap:12px}
+.range-row output{min-width:46px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px dashed var(--card-b)}
+.row:last-child{border-bottom:0}
+.row b{display:block;font-size:.95rem}
+.row small{color:var(--muted);font-size:.8rem}
+.row .ctl{flex:none;min-width:0}
+.row .ctl.input{min-width:130px;width:auto}
+.row.col{flex-direction:column;align-items:stretch}
+.seg{display:inline-flex;padding:4px;border-radius:14px;background:var(--input);border:1px solid var(--card-b);gap:4px}
+.seg button{border:0;background:transparent;padding:8px 14px;border-radius:10px;font-weight:600;font-size:.88rem;color:var(--muted);min-height:38px}
+.seg button.on{background:linear-gradient(135deg,#2563eb,#8b5cf6);color:#fff;box-shadow:var(--glow)}
+.switch{position:relative;display:inline-block;width:52px;height:30px;flex:none}
+.switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:2}
+.switch span{position:absolute;inset:0;border-radius:99px;background:rgba(148,163,184,.35);transition:.25s}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.switch input:checked+span{background:linear-gradient(90deg,var(--accent),var(--cyan));box-shadow:var(--glow)}
+.switch input:checked+span::after{transform:translateX(22px)}
+.switch input:focus-visible+span{outline:2px solid var(--cyan);outline-offset:2px}
+.viz{display:block;width:100%;height:150px;border-radius:16px}
+.viz-sm{height:84px}
+
+/* clock */
+.clock{font-family:'Orbitron',ui-monospace,monospace;font-weight:700;font-size:clamp(2.8rem,12.5vw,6.6rem);line-height:1.05;letter-spacing:.02em;background:var(--clock);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(34,211,238,.32));white-space:nowrap}
+.clock .colon{animation:blink 1s steps(2,start) infinite;opacity:.9}
+.clock .sec{font-size:.55em;opacity:.85;display:inline-block}
+.clock .sec.pop{animation:pop .45s ease-out}
+.clock .ampm{font-size:.25em;margin-left:.4em;letter-spacing:.1em}
+@keyframes blink{50%{opacity:.25}}
+@keyframes pop{0%{transform:translateY(-5px) scale(1.12);opacity:.5}100%{transform:none;opacity:.85}}
+.countdown{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(1.5rem,5vw,2.1rem);color:var(--cyan);text-shadow:0 0 16px rgba(34,211,238,.45);font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;font-size:.75rem;font-weight:700;letter-spacing:.08em}
+.pill-on{color:#052e1d;background:var(--ok);box-shadow:0 0 14px rgba(52,211,153,.5)}
+.pill-off{color:var(--muted);background:var(--input);border:1px solid var(--card-b)}
+
+/* alarm cards */
+.alarm-list{display:grid;gap:14px}
+.alarm-card{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;transition:.25s}
+.alarm-card.off{opacity:.62}
+.alarm-card:hover{border-color:rgba(34,211,238,.4)}
+.ac-main{display:flex;align-items:center;gap:18px;min-width:0;flex:1 1 300px}
+.ac-time{font-family:'Orbitron',monospace;font-size:clamp(1.5rem,5vw,2rem);font-weight:700;white-space:nowrap;background:var(--clock);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.ac-info{min-width:0}
+.ac-name{font-weight:700;font-size:1.05rem;overflow-wrap:anywhere}
+.ac-meta,.ac-next,.ac-note{font-size:.82rem;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+.ac-note{font-style:italic}
+.ac-actions{display:flex;align-items:center;gap:10px}
+.empty{padding:34px 20px;text-align:center;color:var(--muted)}
+.empty svg{width:42px;height:42px;opacity:.6;margin-bottom:10px}
+
+/* songs & player */
+.song-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px dashed var(--card-b)}
+.song-row:last-child{border-bottom:0}
+.song-ic{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(59,130,246,.3),rgba(168,85,247,.3));flex:none}
+.song-row.playing .song-ic{box-shadow:var(--glow);background:linear-gradient(135deg,#2563eb,#8b5cf6);color:#fff}
+.song-info{flex:1 1 200px;min-width:0}
+.song-info b{display:block;overflow-wrap:anywhere}
+.song-info small{color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
+.badge{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:99px;font-size:.68rem;font-weight:700;background:rgba(34,211,238,.12);color:var(--cyan);border:1px solid rgba(34,211,238,.3)}
+.song-actions{display:flex;gap:8px;flex-wrap:wrap}
+.player-ctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.player-seek{display:flex;align-items:center;gap:10px;margin:10px 0}
+.player-seek span{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;min-width:38px}
+.player-vol{display:flex;align-items:center;gap:8px;flex:1 1 200px;min-width:170px}
+
+/* day chips */
+.daychips{display:flex;flex-wrap:wrap;gap:8px}
+.daychip{min-width:48px;min-height:44px;padding:0 10px;border-radius:12px;border:1px solid var(--card-b);background:var(--input);font-weight:600;font-size:.85rem}
+.daychip[aria-pressed="true"]{background:linear-gradient(135deg,#2563eb,#8b5cf6);color:#fff;border-color:transparent;box-shadow:var(--glow)}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.presets button{padding:6px 12px;border-radius:99px;border:1px solid var(--card-b);background:transparent;font-size:.78rem;color:var(--muted);font-weight:600}
+.presets button:hover{color:var(--text);background:var(--input)}
+.form-error{margin:0 0 12px;padding:10px 14px;border-radius:12px;background:rgba(255,90,95,.12);border:1px solid rgba(255,90,95,.45);color:#ff8a8d;font-size:.88rem}
+[data-theme="light"] .form-error{color:#b4232a}
+
+/* modal */
+.modal-backdrop{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(2,4,18,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:fadeIn .2s}
+@media(min-width:640px){.modal-backdrop{align-items:center;padding:20px}}
+.modal{width:100%;max-width:520px;max-height:92vh;overflow:auto;padding:22px;border-radius:24px 24px 0 0;background:var(--card-solid);border:1px solid var(--card-b);animation:slideUp .28s cubic-bezier(.2,.9,.3,1)}
+@media(min-width:640px){.modal{border-radius:24px}}
+.modal-title{margin:0;font-size:1.2rem;font-weight:700}
+.modal-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;margin-top:18px}
+@keyframes fadeIn{from{opacity:0}}
+@keyframes slideUp{from{transform:translateY(24px);opacity:0}}
+.toasts{position:fixed;z-index:200;left:50%;transform:translateX(-50%);bottom:90px;display:flex;flex-direction:column;gap:8px;width:min(92vw,440px);pointer-events:none}
+@media(min-width:768px){.toasts{bottom:28px}}
+.toast{pointer-events:auto;padding:12px 16px;border-radius:14px;font-size:.9rem;font-weight:500;background:var(--card-solid);border:1px solid var(--card-b);box-shadow:var(--shadow);animation:slideUp .25s;border-left:4px solid var(--cyan)}
+.toast-success{border-left-color:var(--ok)}.toast-error{border-left-color:var(--danger)}.toast-warn{border-left-color:var(--warn)}
+.toast.out{opacity:0;transform:translateY(8px);transition:.3s}
+
+/* library extras */
+.pl-chips,.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.pl-chip{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border-radius:99px;border:1px solid var(--card-b);background:var(--input);font-weight:600;font-size:.85rem}
+.pl-chip.on{background:linear-gradient(135deg,#2563eb,#8b5cf6);color:#fff;border-color:transparent;box-shadow:var(--glow)}
+.pl-chip svg{width:14px;height:14px}
+.toolbar .input{width:auto;min-height:38px;padding:6px 10px;font-size:.88rem}
+.group-head{display:flex;justify-content:space-between;padding:14px 4px 6px;font-weight:700;color:var(--cyan);border-bottom:1px solid var(--card-b)}
+.group-head span{color:var(--muted);font-weight:500;font-size:.78rem}
+.queue-box{margin-bottom:12px;padding:12px 14px;border-radius:16px;border:1px solid var(--card-b);background:var(--input)}
+.queue-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;font-size:.88rem}
+.queue-item span{overflow-wrap:anywhere}
+
+/* drag & drop */
+.drag-handle{display:grid;place-items:center;width:32px;height:44px;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:grab;touch-action:none;flex:none}
+.drag-handle:hover{color:var(--text);background:var(--input)}
+.drag-handle svg{width:18px;height:18px}
+.song-row.dragging{position:relative;z-index:5;cursor:grabbing;user-select:none;border-radius:16px;background:var(--card-solid);box-shadow:var(--shadow)}
+.song-row.drop-before{box-shadow:0 -2px 0 var(--cyan)}
+.song-row.drop-after{box-shadow:0 2px 0 var(--cyan)}
+
+/* ringing screen (always dark) */
+.ring{--text:#e8eeff;--muted:#a9b6e0;--card:rgba(16,24,58,.6);--card-b:rgba(125,160,255,.22);--input:rgba(255,255,255,.08);--opt-bg:#0b1233;color-scheme:dark;color:var(--text);position:fixed;inset:0;z-index:100;overflow:auto;background:radial-gradient(circle at 50% 28%,#1d3180 0%,#0a1030 52%,#04061a 100%)}
+.ring::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,rgba(168,85,247,.25),transparent 55%);animation:ringGlow 2.2s ease-in-out infinite;pointer-events:none}
+@keyframes ringGlow{50%{opacity:.35;transform:scale(1.08)}}
+#ringViz{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ring-inner{position:relative;z-index:2;min-height:100%;max-width:580px;margin:0 auto;padding:28px 20px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center}
+.ring-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:99px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.8rem;background:rgba(255,90,95,.15);border:1px solid rgba(255,90,95,.5);color:#ff9a9d}
+.ring-badge svg{width:18px;height:18px;animation:wiggle .6s ease-in-out infinite}
+@keyframes wiggle{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+.ring h2{margin:0;font-size:clamp(1.5rem,6vw,2.2rem);font-weight:700;overflow-wrap:anywhere}
+.ring-song{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.95rem;justify-content:center;margin:0}
+.ring-song svg{width:18px;height:18px;flex:none}
+.ring-vol{display:flex;align-items:center;gap:12px;width:100%;max-width:420px;padding:10px 14px;border-radius:18px;background:var(--card);border:1px solid var(--card-b)}
+.ring-actions{display:flex;flex-direction:column;gap:12px;width:100%;margin-top:8px}
+.btn-stop{width:100%;height:80px;border:0;border-radius:22px;font-size:1.6rem;font-weight:800;letter-spacing:.08em;color:#fff;background:linear-gradient(135deg,#ff5a5f,#e11d48);box-shadow:0 0 34px rgba(255,90,95,.6);animation:stopPulse 1.6s ease-in-out infinite}
+.btn-stop:active{transform:scale(.98)}
+@keyframes stopPulse{50%{box-shadow:0 0 52px rgba(255,90,95,.9)}}
+.btn-snooze{width:100%;height:64px;border-radius:20px;border:1px solid var(--card-b);background:rgba(34,211,238,.12);color:#8be9f7;font-size:1.1rem;font-weight:700}
+.btn-snooze:disabled{opacity:.45}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="Navigasi utama">
+    <div class="brand"><div class="logo"><i data-lucide="alarm-clock"></i></div><div><b>Personal Smart Alarm</b><small>Penggera pintar anda</small></div></div>
+    <nav id="sideNav" class="mt-8 flex flex-col gap-2">
+      <button class="nav-btn" data-act="goto" data-view="dashboard"><i data-lucide="layout-dashboard"></i>Dashboard</button>
+      <button class="nav-btn" data-act="goto" data-view="alarms"><i data-lucide="alarm-clock"></i>Penggera</button>
+      <button class="nav-btn" data-act="goto" data-view="music"><i data-lucide="music"></i>Music Library</button>
+      <button class="nav-btn" data-act="goto" data-view="settings"><i data-lucide="settings"></i>Tetapan</button>
+    </nav>
+    <div class="mt-auto">
+      <div id="sideStatus" class="flex flex-wrap gap-2 mb-4"></div>
+      <button class="btn btn-primary btn-block mb-3" data-pwa="install" data-pwa-ui><i data-lucide="download"></i>Pasang ke Desktop</button>
+      <div class="seg mb-3" role="group" aria-label="Bahasa / Language" style="display:flex"><button data-lang="ms" style="flex:1">Bahasa Melayu</button><button data-lang="en" style="flex:1">English</button></div>
+      <button class="btn btn-block" data-act="toggle-theme"><i data-lucide="sun"></i><span id="themeBtnText">Mod Cerah</span></button>
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <div class="mobile-head">
+      <div class="brand"><div class="logo"><i data-lucide="alarm-clock"></i></div><div><b>Personal Smart Alarm</b><small>Penggera pintar anda</small></div></div>
+      <div class="flex items-center gap-2"><div class="seg" role="group" aria-label="Bahasa / Language"><button data-lang="ms">BM</button><button data-lang="en">EN</button></div>
+        <button class="btn btn-icon" data-act="toggle-theme" aria-label="Tukar tema"><i data-lucide="sun"></i></button></div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view space-y-5" aria-label="Dashboard">
+      <div class="grid-3">
+        <div class="glass p-card" style="text-align:center">
+          <div class="flex items-center justify-between">
+            <span class="label">Waktu Sekarang</span>
+            <button class="btn btn-sm" data-act="toggle-format" aria-label="Tukar format 12 atau 24 jam"><i data-lucide="clock"></i><span id="fmtBtnText">24 jam</span></button>
+          </div>
+          <div class="clock mt-4" role="timer" aria-label="Jam digital"><span id="clkH">00</span><span class="colon">:</span><span id="clkM">00</span><span class="colon sec">:</span><span id="clkS" class="sec">00</span><span id="clkAP" class="ampm"></span></div>
+          <p id="dateText" class="mt-3 muted" style="font-size:1.05rem"></p>
+        </div>
+        <div class="glass p-card">
+          <div class="flex items-center justify-between">
+            <span class="label">Penggera Seterusnya</span>
+            <span id="nextState" class="pill pill-off">OFF</span>
+          </div>
+          <div id="nextName" class="mt-3" style="font-size:1.25rem;font-weight:700;overflow-wrap:anywhere">Tiada penggera aktif</div>
+          <div id="nextTime" class="muted small mt-1">Tambah penggera untuk bermula.</div>
+          <div id="countdown" class="countdown mt-3">--:--:--</div>
+          <div id="nextSong" class="muted small mt-2"></div>
+          <div id="nextCount" class="muted small mt-1"></div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="glass p-card">
+          <h2 class="card-title"><i data-lucide="audio-lines"></i>Visualizer Audio</h2>
+          <canvas id="dashViz" class="viz" aria-label="Visualizer audio"></canvas>
+        </div>
+        <div class="glass p-card">
+          <h2 class="card-title"><i data-lucide="activity"></i>Status Kesediaan</h2>
+          <div id="statusList"></div>
+        </div>
+      </div>
+
+      <div class="glass p-card">
+        <div class="actions-grid">
+          <button class="btn btn-primary" data-act="add-alarm"><i data-lucide="plus"></i>Add Alarm</button>
+          <button class="btn" data-act="goto" data-view="music"><i data-lucide="library"></i>Music Library</button>
+          <button class="btn" data-act="test"><i data-lucide="zap"></i>Test Alarm</button>
+          <button class="btn" data-act="goto" data-view="settings"><i data-lucide="settings"></i>Settings</button>
+        </div>
+      </div>
+
+      <div class="notice"><i data-lucide="triangle-alert"></i><div><b>Penting:</b> penggera web paling boleh diharapkan apabila halaman ini <b>kekal terbuka</b> dan pelayar membenarkan JavaScript serta audio berjalan. Penggera tidak dijamin berbunyi jika pelayar ditutup, tab digantung, telefon dikunci atau sistem operasi menyekat aktiviti latar belakang. Jangan bergantung kepadanya untuk perkara kritikal.</div></div>
+
+      <div class="glass p-card">
+        <h2 class="card-title"><i data-lucide="calendar-clock"></i>Penggera Akan Datang</h2>
+        <div id="upcomingList"></div>
+      </div>
+    </section>
+
+    <!-- ALARMS -->
+    <section id="view-alarms" class="view is-hidden" aria-label="Penggera">
+      <div class="page-head">
+        <h1 class="page-title">Penggera</h1>
+        <button class="btn btn-primary" data-act="add-alarm"><i data-lucide="plus"></i>Add Alarm</button>
+      </div>
+      <div id="alarmList" class="alarm-list"></div>
+    </section>
+
+    <!-- MUSIC -->
+    <section id="view-music" class="view is-hidden space-y-5" aria-label="Music Library">
+      <div class="page-head" style="margin-bottom:0">
+        <div><h1 class="page-title">Music Library</h1><p id="libSummary" class="muted small mt-1"></p></div>
+        <div class="flex gap-2">
+          <input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.ogg,.oga,.m4a,.aac" multiple class="is-hidden">
+          <button class="btn btn-primary" data-act="upload"><i data-lucide="upload"></i>Upload Music</button>
+        </div>
+      </div>
+      <div id="dbWarn" class="notice is-hidden"><i data-lucide="triangle-alert"></i><div>Penyimpanan lagu (IndexedDB) tidak tersedia pada pelayar ini. Mod peribadi/incognito sesetengah pelayar menyekatnya. Penggera masih boleh guna nada lalai.</div></div>
+
+      <div class="glass p-card" id="playerCard">
+        <h2 class="card-title"><i data-lucide="disc-3"></i>Audio Player</h2>
+        <div class="song-info mb-3"><b id="pTitle">Tiada lagu dipilih</b><small id="pSub">Pilih lagu dari senarai untuk pratonton.</small></div>
+        <canvas id="playerViz" class="viz viz-sm" aria-label="Visualizer pemain"></canvas>
+        <div class="player-seek"><span id="pCur">0:00</span><input type="range" id="pSeek" min="0" max="0" step="0.1" value="0" disabled aria-label="Bar seek"><span id="pDur">0:00</span></div>
+        <div class="player-ctrl">
+          <button class="btn btn-icon" id="pShuffle" data-lib="shuffle" aria-label="Rawak (shuffle)"><i data-lucide="shuffle"></i></button>
+          <button class="btn btn-icon" id="pPrev" data-lib="prev" aria-label="Lagu sebelumnya"><i data-lucide="skip-back"></i></button>
+          <button class="btn btn-primary btn-icon" id="pPlay" data-act="p-toggle" aria-label="Main atau jeda"><i data-lucide="play"></i></button>
+          <button class="btn btn-icon" id="pStop" data-act="p-stop" aria-label="Henti"><i data-lucide="square"></i></button>
+          <button class="btn btn-icon" id="pNext" data-lib="next" aria-label="Lagu seterusnya"><i data-lucide="skip-forward"></i></button>
+          <button class="btn btn-icon" id="pRepeat" data-lib="repeat" aria-label="Ulang"><i data-lucide="repeat"></i></button>
+          <div class="player-vol">
+            <button class="btn btn-icon" id="pMute" data-act="p-mute" aria-label="Senyap atau nyahsenyap"><i data-lucide="volume-2"></i></button>
+            <input type="range" id="pVol" min="0" max="100" step="1" aria-label="Volume pemain">
+            <output id="pVolVal" style="min-width:44px;text-align:right;font-weight:600">80%</output>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass p-card">
+        <div id="libTools">
+          <div id="plChips" class="pl-chips" aria-label="Playlist"></div>
+          <div id="plManage" class="toolbar is-hidden">
+            <button class="btn btn-sm" data-lib="pl-rename"><i data-lucide="pencil"></i>Namakan semula</button>
+            <button class="btn btn-sm" data-lib="pl-delete"><i data-lucide="trash-2"></i>Padam playlist</button>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-primary btn-sm" data-lib="play-all"><i data-lucide="play"></i>Main semua</button>
+            <button class="btn btn-sm" data-lib="shuffle-all"><i data-lucide="shuffle"></i>Shuffle play</button>
+            <button class="btn btn-sm" data-lib="random"><i data-lucide="dices"></i>Lagu rawak</button>
+            <button class="btn btn-sm" id="libAuto" data-lib="auto"><i data-lucide="infinity"></i>Main berterusan</button>
+          </div>
+          <div class="toolbar">
+            <select id="libSort" class="input" aria-label="Susun mengikut">
+              <option value="added">Susun: Tarikh ditambah</option><option value="title">Susun: Tajuk</option><option value="artist">Susun: Artis</option>
+              <option value="duration">Susun: Tempoh</option><option value="size">Susun: Saiz</option><option value="manual">Susun: Manual (seret)</option>
+            </select>
+            <button class="btn btn-icon btn-sm" id="libDir" data-lib="dir"></button>
+            <select id="libGroup" class="input" aria-label="Kumpulkan mengikut">
+              <option value="none">Tanpa kumpulan</option><option value="artist">Kumpul: Artis</option><option value="letter">Kumpul: Huruf pertama</option><option value="format">Kumpul: Format</option>
+            </select>
+          </div>
+          <div id="queueBox"></div>
+        </div>
+        
+<label class="field" style="margin-bottom:8px"><span class="fl">Cari lagu</span>
+          <input id="songSearch" class="input" type="search" placeholder="Cari tajuk, artis atau nama fail…" autocomplete="off"></label>
+        <div id="songList"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view is-hidden space-y-5" aria-label="Tetapan">
+      <div class="page-head"><h1 class="page-title">Tetapan</h1></div>
+      <div class="grid-2">
+        <div class="glass p-card">
+          <h2 class="card-title"><i data-lucide="palette"></i>Paparan</h2>
+          <div class="row"><div><b>Format masa</b><small>Jam 12 atau 24 jam</small></div>
+            <div class="seg ctl" data-seg="format"><button data-val="12">12 jam</button><button data-val="24">24 jam</button></div></div>
+          <div class="row"><div><b>Tema</b><small>Gelap (utama) atau cerah</small></div>
+            <div class="seg ctl" data-seg="theme"><button data-val="dark">Gelap</button><button data-val="light">Cerah</button></div></div>
+          <div class="row"><div><b>Bahasa</b><small>Bahasa paparan aplikasi</small></div>
+            <div class="seg ctl" role="group" aria-label="Bahasa / Language"><button data-lang="ms">Bahasa Melayu</button><button data-lang="en">English</button></div></div>
+          <div class="row" data-pwa-ui><div><b>Pasang Aplikasi</b><small>Pasang sebagai aplikasi dengan tetingkap sendiri (perlu https:// atau localhost)</small></div>
+            <button class="btn btn-primary ctl" data-pwa="install"><i data-lucide="download"></i>Pasang ke Desktop</button></div>
+        </div>
+        <div class="glass p-card">
+          <h2 class="card-title"><i data-lucide="bell-ring"></i>Penggera</h2>
+          <div class="row col"><div><b>Volume lalai</b><small>Untuk penggera baharu</small></div>
+            <div class="range-row"><input type="range" id="setVol" min="0" max="100" step="1" aria-label="Volume lalai"><output id="setVolVal">80%</output></div></div>
+          <div class="row"><div><b>Tempoh snooze lalai</b></div>
+            <select id="setSnooze" class="input ctl" aria-label="Snooze lalai"></select></div>
+          <div class="row"><div><b>Had snooze</b><small>Bilangan snooze maksimum setiap kejadian</small></div>
+            <select id="setMaxSnooze" class="input ctl" aria-label="Had snooze"></select></div>
+          <div class="row"><div><b>Berulang lalai</b><small>Untuk penggera baharu</small></div>
+            <select id="setRepeat" class="input ctl" aria-label="Tetapan berulang lalai">
+              <option value="once">Sekali sahaja</option><option value="daily">Setiap hari</option>
+              <option value="weekdays">Isnin–Jumaat</option><option value="weekend">Hujung minggu</option></select></div>
+        </div>
+        <div class="glass p-card">
+          <h2 class="card-title"><i data-lucide="smartphone"></i>Notifikasi &amp; Peranti</h2>
+          <div class="row"><div><b>Notifikasi pelayar</b><small>Dipaparkan apabila penggera berbunyi (perlu kebenaran)</small></div>
+            <label class="switch ctl"><input type="checkbox" id="setNotify" aria-label="Notifikasi pelayar"><span></span></label></div>
+          <div class="row"><div><b>Kekalkan skrin hidup</b><small>Mengurangkan risiko tab digantung (jika disokong)</small></div>
+            <label class="switch ctl"><input type="checkbox" id="setWake" aria-label="Kekalkan skrin hidup"><span></span></label></div>
+          <div class="row"><div><b>Uji penggera</b><small>Mainkan skrin penggera sekarang</small></div>
+            <button class="btn btn-primary ctl" data-act="test"><i data-lucide="zap"></i>Test Alarm</button></div>
+          <div class="row"><div><b>Reset tetapan</b><small>Kembalikan tetapan asal (penggera dikekalkan)</small></div>
+            <button class="btn ctl" data-act="reset-settings"><i data-lucide="rotate-ccw"></i>Reset Settings</button></div>
+        </div>
+        <div class="glass p-card">
+          <h2 class="card-title"><i data-lucide="shield-check"></i>Data &amp; Privasi</h2>
+          <div class="notice info mb-4"><i data-lucide="info"></i><div>Penggera dan tetapan disimpan dalam <b>LocalStorage</b>, manakala fail lagu dalam <b>IndexedDB</b>, pada pelayar ini sahaja. Data dan lagu <b>tidak diselaraskan secara automatik</b> antara peranti atau pelayar yang berlainan. Export mengandungi penggera &amp; tetapan sahaja (bukan fail lagu).</div></div>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn" data-act="export"><i data-lucide="download"></i>Export Settings</button>
+            <button class="btn" data-act="import"><i data-lucide="upload"></i>Import Settings</button>
+            <input type="file" id="importInput" accept="application/json,.json" class="is-hidden">
+            <button class="btn btn-danger" data-act="clear-all"><i data-lucide="trash-2"></i>Clear All Data</button>
+          </div>
+        </div>
+      </div>
+      <div class="notice"><i data-lucide="triangle-alert"></i><div>Volume dalam aplikasi hanya mengawal tahap audio pelayar. Volume sebenar masih bergantung pada tetapan peranti anda, dan sesetengah pelayar mudah alih (contohnya iOS) mengabaikan kawalan volume laman web.</div></div>
+    </section>
+  </main>
+</div>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="Navigasi mudah alih">
+  <button class="nav-btn" data-act="goto" data-view="dashboard"><i data-lucide="layout-dashboard"></i>Dashboard</button>
+  <button class="nav-btn" data-act="goto" data-view="alarms"><i data-lucide="alarm-clock"></i>Penggera</button>
+  <button class="nav-btn" data-act="goto" data-view="music"><i data-lucide="music"></i>Muzik</button>
+  <button class="nav-btn" data-act="goto" data-view="settings"><i data-lucide="settings"></i>Tetapan</button>
+</nav>
+
+<!-- RINGING SCREEN -->
+<div id="ring" class="ring is-hidden" role="alertdialog" aria-modal="true" aria-labelledby="ringName">
+  <canvas id="ringViz" aria-hidden="true"></canvas>
+  <div class="ring-inner">
+    <div class="ring-badge"><i data-lucide="bell-ring"></i><span id="ringTag">Penggera</span></div>
+    <div class="clock" style="font-size:clamp(3rem,16vw,6.5rem)"><span id="rH">00</span><span class="colon">:</span><span id="rM">00</span><span class="colon sec">:</span><span id="rS" class="sec">00</span><span id="rAP" class="ampm"></span></div>
+    <h2 id="ringName"></h2>
+    <p id="ringNote" class="muted is-hidden" style="margin:0"></p>
+    <p class="ring-song"><i data-lucide="music"></i><span id="ringSong"></span></p>
+    <div id="ringBlocked" class="notice is-hidden" style="text-align:left;flex-direction:column;width:100%">
+      <div><b>Audio disekat oleh pelayar.</b> Pelayar tidak membenarkan audio dimainkan secara automatik. Tekan butang di bawah untuk memulakan bunyi.</div>
+      <button class="btn btn-primary btn-block" data-act="ring-unblock"><i data-lucide="volume-2"></i>Mulakan Audio</button>
+    </div>
+    <div class="ring-vol">
+      <button class="btn btn-icon" id="ringMute" data-act="ring-mute" aria-label="Senyap atau nyahsenyap"><i data-lucide="volume-2"></i></button>
+      <input type="range" id="ringVol" min="0" max="100" step="1" aria-label="Volume penggera">
+      <output id="ringVolVal" style="min-width:44px;text-align:right;font-weight:600">80%</output>
+    </div>
+    <div class="ring-actions">
+      <button id="btnStop" class="btn-stop" data-act="ring-stop">STOP ALARM</button>
+      <button id="btnSnooze" class="btn-snooze" data-act="ring-snooze">SNOOZE</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+(() => {
+/* ============================== Utilities ============================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const num = (v, a, b, d) => { v = Number(v); return Number.isFinite(v) ? clamp(Math.round(v), a, b) : d; };
+const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const sameSet = (a, b) => a.length === b.length && a.every(x => b.includes(x));
+const icons = () => { try { window.lucide && lucide.createIcons(); } catch (e) {} };
+const setIcon = (btn, name) => { btn.innerHTML = `<i data-lucide="${name}"></i>`; icons(); };
+
+const KEYS = { alarms:'psa_alarms', settings:'psa_settings', fired:'psa_fired', snoozes:'psa_snoozes', ringing:'psa_ringing', playlists:'psa_playlists', libprefs:'psa_libprefs' };
+const SNOOZE_OPTS = [1, 5, 10, 15, 20, 30];
+const MAX_SNOOZE_OPTS = [0, 1, 2, 3, 5, 10];
+const DAYS = ['Ahd','Isn','Sel','Rab','Kha','Jum','Sab'];
+const DAYS_LONG = ['Ahad','Isnin','Selasa','Rabu','Khamis','Jumaat','Sabtu'];
+const GRACE_MS = 120000;
+const MAX_FILE = 40 * 1024 * 1024;
+const EXT_OK = ['mp3','wav','ogg','oga','m4a','aac'];
+const DEFAULTS = { lang:'ms', format:'24', theme:'dark', volume:80, snooze:5, notify:false, maxSnooze:3, repeatDefault:'once', keepAwake:false, playerVolume:80, playerMuted:false, defaultSongId:null };
+
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { toast('Gagal menyimpan data pada pelayar (storan penuh atau disekat).', 'error'); return false; } },
+  remove(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+/* dates */
+const toDateStr = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseLocal = (ds, ts) => { const [y, mo, d] = ds.split('-').map(Number); const [h, mi] = ts.split(':').map(Number); return new Date(y, mo - 1, d, h, mi, 0, 0); };
+const validDateStr = ds => { if (typeof ds !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ds)) return false; const [y, m, d] = ds.split('-').map(Number); const t = new Date(y, m - 1, d); return t.getFullYear() === y && t.getMonth() === m - 1 && t.getDate() === d; };
+const validTime = t => typeof t === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+function onceDateFor(time) { const now = new Date(); return toDateStr(parseLocal(toDateStr(now), time) > now ? now : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)); }
+
+/* formatting */
+function fmtClock(d) {
+  const h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+  return settings.format === '12' ? { h: pad(h % 12 || 12), m: pad(m), s: pad(s), ap: h < 12 ? 'AM' : 'PM' } : { h: pad(h), m: pad(m), s: pad(s), ap: '' };
+}
+function fmtHM(t) { const [h, m] = t.split(':').map(Number); return settings.format === '12' ? `${h % 12 || 12}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}` : `${pad(h)}:${pad(m)}`; }
+function fmtDur(sec) { if (!isFinite(sec) || sec <= 0) return '0:00'; sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60; return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`; }
+function fmtBytes(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'; return (b / 1048576).toFixed(1) + ' MB'; }
+function fmtCountdown(ms) { let s = Math.max(0, Math.floor(ms / 1000)); const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return (d ? `${d} hari ` : '') + `${pad(h)}:${pad(m)}:${pad(s % 60)}`; }
+const fmtDateShort = ds => parseLocal(ds, '00:00').toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtWhen = d => d.toLocaleDateString(dateLocale(), { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + fmtHM(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+function repeatText(a) {
+  if (!a.repeat.length) return a.date ? `Sekali · ${fmtDateShort(a.date)}` : 'Sekali sahaja';
+  if (a.repeat.length === 7) return 'Setiap hari';
+  if (sameSet(a.repeat, [1,2,3,4,5])) return 'Isnin–Jumaat';
+  if (sameSet(a.repeat, [0,6])) return 'Hujung minggu';
+  return a.repeat.map(i => DAYS[i]).join(', ');
+}
+
+/* ============================== UI helpers ============================== */
+function toast(msg, type = 'info', ms = 4000) {
+  const box = $('#toasts'); if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type; el.setAttribute('role', type === 'error' ? 'alert' : 'status'); el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, ms);
+}
+function openModal(html, opts = {}) {
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-backdrop';
+  wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  const prev = document.activeElement;
+  let closed = false;
+  const onKey = e => { if (e.key === 'Escape' && $$('.modal-backdrop').pop() === wrap) { e.stopPropagation(); close(); } };
+  function close(val) {
+    if (closed) return; closed = true;
+    document.removeEventListener('keydown', onKey, true);
+    wrap.remove();
+    if (prev && prev.focus && !ring.active) { try { prev.focus(); } catch (e) {} }
+    if (opts.onClose) opts.onClose(val);
+  }
+  wrap.addEventListener('mousedown', e => { if (e.target === wrap) close(); });
+  wrap.addEventListener('click', e => { if (e.target.closest('[data-close]')) close(); });
+  document.addEventListener('keydown', onKey, true);
+  document.body.appendChild(wrap);
+  icons();
+  const first = wrap.querySelector('[autofocus],input:not([type=hidden]),select,textarea,button');
+  if (first) first.focus();
+  return { el: wrap.firstElementChild, wrap, close };
+}
+function confirmDialog({ title, message, okText = 'Ya', danger = false }) {
+  return new Promise(res => {
+    const m = openModal(`<h3 class="modal-title">${esc(title)}</h3><p class="muted mt-2" style="line-height:1.55">${esc(message)}</p>
+      <div class="modal-actions"><button class="btn" data-close>Batal</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="cfOk">${esc(okText)}</button></div>`,
+      { onClose: () => res(false) });
+    $('#cfOk', m.el).addEventListener('click', () => { res(true); m.close(true); });
+  });
+}
+
+/* ============================== State ============================== */
+let settings = { ...DEFAULTS };
+let alarms = [];
+let songs = [];
+let fired = {};
+let snoozes = [];
+let currentView = 'dashboard';
+let audioUnlocked = false;
+let ringQueue = [];
+const alarmById = id => alarms.find(a => a.id === id);
+const songById = id => songs.find(s => s.id === id);
+const songLabel = m => m.artist ? `${m.title} — ${m.artist}` : m.title;
+const saveAlarms = () => LS.set(KEYS.alarms, alarms);
+const saveSettings = () => LS.set(KEYS.settings, settings);
+const saveFired = () => LS.set(KEYS.fired, fired);
+const saveSnoozes = () => LS.set(KEYS.snoozes, snoozes);
+
+/* ============================== Sanitizers ============================== */
+function sanitizeSettings(r) {
+  const s = { ...DEFAULTS };
+  if (!r || typeof r !== 'object') return s;
+  if (r.format === '12' || r.format === '24') s.format = r.format;
+  if (r.theme === 'light' || r.theme === 'dark') s.theme = r.theme;
+  if (LANGS.includes(r.lang)) s.lang = r.lang;
+  s.volume = num(r.volume, 0, 100, DEFAULTS.volume);
+  s.snooze = SNOOZE_OPTS.includes(Number(r.snooze)) ? Number(r.snooze) : DEFAULTS.snooze;
+  s.notify = r.notify === true;
+  s.maxSnooze = MAX_SNOOZE_OPTS.includes(Number(r.maxSnooze)) ? Number(r.maxSnooze) : DEFAULTS.maxSnooze;
+  s.repeatDefault = ['once','daily','weekdays','weekend'].includes(r.repeatDefault) ? r.repeatDefault : 'once';
+  s.keepAwake = r.keepAwake === true;
+  s.playerVolume = num(r.playerVolume, 0, 100, DEFAULTS.playerVolume);
+  s.playerMuted = r.playerMuted === true;
+  s.defaultSongId = (typeof r.defaultSongId === 'string' && /^[\w-]{1,64}$/.test(r.defaultSongId)) ? r.defaultSongId : null;
+  return s;
+}
+function sanitizeAlarm(raw) {
+  if (!raw || typeof raw !== 'object' || !validTime(raw.time)) return null;
+  const repeat = Array.isArray(raw.repeat) ? [...new Set(raw.repeat.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort() : [];
+  let date = validDateStr(raw.date) ? raw.date : '';
+  if (!repeat.length && !date) date = onceDateFor(raw.time);
+  if (repeat.length) date = '';
+  return {
+    id: (typeof raw.id === 'string' && /^[\w-]{1,64}$/.test(raw.id)) ? raw.id : uid(),
+    name: String(raw.name ?? '').trim().slice(0, 40) || 'Penggera',
+    time: raw.time, date, repeat,
+    songId: (typeof raw.songId === 'string' && /^[\w-]{1,64}$/.test(raw.songId)) ? raw.songId : null,
+    volume: num(raw.volume, 0, 100, 80),
+    snooze: SNOOZE_OPTS.includes(Number(raw.snooze)) ? Number(raw.snooze) : 5,
+    enabled: raw.enabled === true,
+    note: String(raw.note ?? '').trim().slice(0, 200),
+    createdAt: Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now()
+  };
+}
+
+/* ============================== IndexedDB ============================== */
+const DB = {
+  db: null, ok: false,
+  open() {
+    return new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('IndexedDB tidak tersedia'));
+      let r; try { r = indexedDB.open('personal-smart-alarm', 1); } catch (e) { return rej(e); }
+      r.onupgradeneeded = () => { const d = r.result; if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'id' }); if (!d.objectStoreNames.contains('blobs')) d.createObjectStore('blobs', { keyPath: 'id' }); };
+      r.onsuccess = () => { this.db = r.result; this.ok = true; res(); };
+      r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked'));
+    });
+  },
+  run(stores, mode, fn) {
+    return new Promise((res, rej) => {
+      let out; const tx = this.db.transaction(stores, mode);
+      tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('abort'));
+      const rq = fn(tx); if (rq && rq.addEventListener) rq.addEventListener('success', () => { out = rq.result; });
+    });
+  },
+  allMeta() { return this.run(['meta'], 'readonly', tx => tx.objectStore('meta').getAll()); },
+  getBlob(id) { return this.run(['blobs'], 'readonly', tx => tx.objectStore('blobs').get(id)).then(r => (r && r.blob) || null); },
+  addSong(meta, blob) { return this.run(['meta','blobs'], 'readwrite', tx => { tx.objectStore('meta').put(meta); tx.objectStore('blobs').put({ id: meta.id, blob }); }); },
+  putMeta(meta) { return this.run(['meta'], 'readwrite', tx => { tx.objectStore('meta').put(meta); }); },
+  deleteSong(id) { return this.run(['meta','blobs'], 'readwrite', tx => { tx.objectStore('meta').delete(id); tx.objectStore('blobs').delete(id); }); },
+  clearAll() { return this.run(['meta','blobs'], 'readwrite', tx => { tx.objectStore('meta').clear(); tx.objectStore('blobs').clear(); }); }
+};
+
+/* ============================== Audio core ============================== */
+let ctx = null, master = null, freqBuf = null;
+const sources = new WeakMap();
+function ensureCtx() {
+  if (!ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    try {
+      ctx = new AC(); master = ctx.createAnalyser(); master.fftSize = 512; master.smoothingTimeConstant = .82;
+      master.connect(ctx.destination); freqBuf = new Uint8Array(master.frequencyBinCount);
+      ctx.onstatechange = () => { audioUnlocked = ctx.state === 'running'; renderStatus(); };
+    } catch (e) { ctx = null; return null; }
+  }
+  return ctx;
+}
+async function unlockAudio() {
+  const c = ensureCtx();
+  try {
+    if (c) {
+      if (c.state !== 'running') await c.resume();
+      const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0);
+    }
+  } catch (e) {}
+  const was = audioUnlocked; audioUnlocked = !c || c.state === 'running';
+  if (was !== audioUnlocked) renderStatus();
+  return audioUnlocked;
+}
+function attach(el) {
+  const c = ensureCtx();
+  if (!c || c.state !== 'running' || sources.has(el)) return;
+  try { const s = c.createMediaElementSource(el); s.connect(master); sources.set(el, s); } catch (e) {}
+}
+const beep = { gain: null, timer: null };
+function startBeep(vol) {
+  stopBeep();
+  const c = ensureCtx(); if (!c || c.state !== 'running') throw new Error('blocked');
+  beep.gain = c.createGain(); beep.gain.gain.value = ring.muted ? 0 : vol; beep.gain.connect(master);
+  const burst = () => {
+    if (!beep.gain) return; const t0 = c.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = i % 2 ? 988 : 880;
+      o.connect(g); g.connect(beep.gain); const s = t0 + i * .22;
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(.7, s + .02); g.gain.linearRampToValueAtTime(0, s + .18);
+      o.start(s); o.stop(s + .2);
+    }
+  };
+  burst(); beep.timer = setInterval(burst, 1400);
+}
+function stopBeep() { clearInterval(beep.timer); beep.timer = null; if (beep.gain) { try { beep.gain.disconnect(); } catch (e) {} beep.gain = null; } }
+
+/* ============================== Library player ============================== */
+const player = new Audio(); player.preload = 'metadata';
+const pl = { id: null, url: null, seeking: false };
+function revokePlayerUrl() { if (pl.url) { URL.revokeObjectURL(pl.url); pl.url = null; } }
+function applyPlayerVolume() { player.volume = settings.playerVolume / 100; player.muted = settings.playerMuted; }
+function pausePlayer() { if (!player.paused) player.pause(); }
+async function playerPlay() {
+  if (ring.active) { toast('Pemain dijeda semasa penggera berbunyi.', 'warn'); return; }
+  const c = ensureCtx(); try { if (c && c.state !== 'running') await c.resume(); } catch (e) {}
+  audioUnlocked = !c || c.state === 'running';
+  attach(player);
+  try { await player.play(); } catch (e) { if (!e || e.name !== 'AbortError') toast('Tidak dapat memainkan audio. Cuba tekan butang main sekali lagi.', 'warn'); }
+  renderPlayerUI(); renderSongList();
+}
+async function playerSelect(id) {
+  const meta = songById(id); if (!meta) return;
+  if (pl.id === id && pl.url) { if (player.paused) await playerPlay(); else { player.pause(); } return; }
+  try {
+    const blob = await DB.getBlob(id); if (!blob) throw new Error('missing');
+    pausePlayer(); revokePlayerUrl();
+    pl.url = URL.createObjectURL(blob); pl.id = id; player.src = pl.url; applyPlayerVolume();
+    await playerPlay();
+  } catch (e) { pl.id = null; revokePlayerUrl(); toast('Fail muzik tidak dapat dibaca. Cuba muat naik semula.', 'error'); renderPlayerUI(); }
+}
+function playerStop() { player.pause(); try { player.currentTime = 0; } catch (e) {} renderPlayerUI(); renderSongList(); }
+function playerReset() { player.pause(); player.removeAttribute('src'); player.load(); revokePlayerUrl(); pl.id = null; renderPlayerUI(); }
+function renderPlayerUI() {
+  const meta = pl.id && songById(pl.id);
+  $('#pTitle').textContent = meta ? meta.title : 'Tiada lagu dipilih';
+  $('#pSub').textContent = meta ? (meta.artist || meta.fileName) : 'Pilih lagu dari senarai untuk pratonton.';
+  const playing = !!meta && !player.paused;
+  setIcon($('#pPlay'), playing ? 'pause' : 'play');
+  $('#pPlay').disabled = !meta; $('#pStop').disabled = !meta;
+  const dur = isFinite(player.duration) ? player.duration : (meta ? meta.duration : 0);
+  const seek = $('#pSeek'); seek.disabled = !meta; seek.max = dur || 0;
+  if (!pl.seeking) seek.value = meta ? player.currentTime : 0;
+  $('#pCur').textContent = fmtDur(meta ? (pl.seeking ? Number(seek.value) : player.currentTime) : 0);
+  $('#pDur').textContent = fmtDur(dur);
+  $('#pVol').value = settings.playerMuted ? 0 : settings.playerVolume;
+  $('#pVolVal').textContent = (settings.playerMuted ? 0 : settings.playerVolume) + '%';
+  setIcon($('#pMute'), (settings.playerMuted || settings.playerVolume === 0) ? 'volume-x' : 'volume-2');
+}
+['play', 'pause', 'ended', 'loadedmetadata'].forEach(ev => player.addEventListener(ev, () => { renderPlayerUI(); renderSongList(); }));
+player.addEventListener('timeupdate', () => { if (!pl.seeking) { $('#pSeek').value = player.currentTime; $('#pCur').textContent = fmtDur(player.currentTime); } });
+player.addEventListener('error', () => { if (pl.id) { toast('Ralat memainkan fail muzik. Format mungkin tidak disokong.', 'error'); } });
+
+/* ============================== Music library ============================== */
+function probeDuration(file) {
+  return new Promise((res, rej) => {
+    const a = new Audio(), url = URL.createObjectURL(file); let done = false, to;
+    const fin = (fn, v) => { if (done) return; done = true; clearTimeout(to); a.removeAttribute('src'); a.load(); URL.revokeObjectURL(url); fn(v); };
+    to = setTimeout(() => fin(rej, new Error('timeout')), 8000);
+    a.preload = 'metadata';
+    a.onloadedmetadata = () => fin(res, isFinite(a.duration) ? a.duration : 0);
+    a.onerror = () => fin(rej, new Error('tidak boleh dibaca'));
+    a.src = url;
+  });
+}
+async function addFiles(fileList) {
+  if (!DB.ok) { toast('Penyimpanan lagu tidak tersedia pada pelayar ini.', 'error'); return; }
+  let added = 0;
+  for (const f of [...fileList]) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (!((f.type && f.type.startsWith('audio/')) || EXT_OK.includes(ext))) { toast(`"${f.name}": format tidak disokong. Gunakan MP3, WAV, OGG atau M4A/AAC.`, 'error', 6000); continue; }
+    if (f.size === 0) { toast(`"${f.name}" kosong.`, 'error'); continue; }
+    if (f.size > MAX_FILE) { toast(`"${f.name}" melebihi had ${fmtBytes(MAX_FILE)}.`, 'error', 6000); continue; }
+    let dur; try { dur = await probeDuration(f); } catch (e) { toast(`"${f.name}": fail tidak dapat dibaca atau format tidak disokong oleh pelayar ini.`, 'error', 6500); continue; }
+    const meta = { id: uid(), fileName: f.name, title: f.name.replace(/\.[^.]+$/, '').slice(0, 80) || 'Tanpa tajuk', artist: '', size: f.size, type: f.type || ('audio/' + ext), duration: dur, addedAt: Date.now() };
+    try { await DB.addSong(meta, f); songs.push(meta); added++; }
+    catch (e) { toast(e && e.name === 'QuotaExceededError' ? 'Storan pelayar penuh. Padam beberapa lagu dahulu.' : `Gagal menyimpan "${f.name}".`, 'error', 6000); }
+  }
+  if (added) {
+    toast(`${added} lagu ditambah ke Music Library.`, 'success');
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+    renderSongList(); renderStatus();
+  }
+}
+function renderSongList() {
+  $('#dbWarn').classList.toggle('is-hidden', DB.ok);
+  renderLibraryTools();
+  const total = songs.reduce((n, s) => n + s.size, 0);
+  $('#libSummary').textContent = `${songs.length} lagu · ${fmtBytes(total)} disimpan pada pelayar ini`;
+  const q = $('#songSearch').value.trim().toLowerCase();
+  const list = viewSongs(q);
+  const box = $('#songList');
+  if (!songs.length) { box.innerHTML = `<div class="empty"><i data-lucide="music-2"></i><p>Belum ada lagu. Tekan <b>Upload Music</b> untuk memuat naik MP3, WAV, OGG atau M4A.</p></div>`; icons(); return; }
+  if (!list.length) { box.innerHTML = `<div class="empty"><p>${currentPlaylist() && !q ? 'Playlist ini masih kosong. Tekan ikon folder pada lagu untuk menambah.' : 'Tiada lagu sepadan dengan carian anda.'}</p></div>`; return; }
+  box.innerHTML = list.map((s, i) => {
+    const playing = pl.id === s.id && !player.paused;
+    const used = alarms.filter(a => a.songId === s.id).length;
+    return `${groupHeader(list, i)}<div class="song-row ${playing ? 'playing' : ''}" data-song="${s.id}">
+      ${dragHandle()}<div class="song-ic"><i data-lucide="${playing ? 'audio-lines' : 'music'}"></i></div>
+      <div class="song-info"><b>${esc(s.title)}${settings.defaultSongId === s.id ? '<span class="badge">Lalai</span>' : ''}${used ? `<span class="badge">${used} penggera</span>` : ''}</b>
+        <small>${s.artist ? esc(s.artist) + ' · ' : ''}${esc(s.fileName)} · ${fmtBytes(s.size)} · ${fmtDur(s.duration)}</small></div>
+      <div class="song-actions">
+        <button class="btn btn-icon btn-sm" data-act="song-play" data-id="${s.id}" aria-label="${playing ? 'Jeda' : 'Main'} ${esc(s.title)}"><i data-lucide="${playing ? 'pause' : 'play'}"></i></button>
+        <button class="btn btn-icon btn-sm" data-lib="queue-add" data-id="${s.id}" aria-label="Tambah ke queue: ${esc(s.title)}"><i data-lucide="list-plus"></i></button>
+        <button class="btn btn-icon btn-sm" data-lib="pl-add" data-id="${s.id}" aria-label="Tambah ke playlist: ${esc(s.title)}"><i data-lucide="folder-plus"></i></button>
+        ${currentPlaylist() ? `<button class="btn btn-icon btn-sm" data-lib="pl-remove" data-id="${s.id}" aria-label="Buang daripada playlist: ${esc(s.title)}"><i data-lucide="list-minus"></i></button>` : ''}
+        <button class="btn btn-sm" data-act="song-alarm" data-id="${s.id}"><i data-lucide="bell"></i>Set as Alarm Music</button>
+        <button class="btn btn-icon btn-sm" data-act="song-edit" data-id="${s.id}" aria-label="Edit metadata ${esc(s.title)}"><i data-lucide="pencil"></i></button>
+        <button class="btn btn-icon btn-sm" data-act="song-del" data-id="${s.id}" aria-label="Padam ${esc(s.title)}"><i data-lucide="trash-2"></i></button>
+      </div></div>`;
+  }).join('');
+  icons();
+}
+function openEditSong(id) {
+  const s = songById(id); if (!s) return;
+  const m = openModal(`<h3 class="modal-title">Edit Metadata</h3>
+    <form id="smForm" class="mt-4" novalidate>
+      <p id="smErr" class="form-error is-hidden" role="alert"></p>
+      <label class="field"><span class="fl">Tajuk</span><input id="smTitle" class="input" maxlength="80" value="${esc(s.title)}" required></label>
+      <label class="field"><span class="fl">Artis (pilihan)</span><input id="smArtist" class="input" maxlength="60" value="${esc(s.artist)}"></label>
+      <p class="muted small">Fail: ${esc(s.fileName)}</p>
+      <div class="modal-actions"><button type="button" class="btn" data-close>Batal</button><button class="btn btn-primary" type="submit">Simpan</button></div>
+    </form>`);
+  $('#smForm', m.el).addEventListener('submit', async e => {
+    e.preventDefault();
+    const title = $('#smTitle', m.el).value.trim().slice(0, 80), artist = $('#smArtist', m.el).value.trim().slice(0, 60);
+    if (!title) { const er = $('#smErr', m.el); er.textContent = 'Tajuk tidak boleh kosong.'; er.classList.remove('is-hidden'); $('#smTitle', m.el).focus(); return; }
+    const next = { ...s, title, artist };
+    try { await DB.putMeta(next); Object.assign(s, next); renderSongList(); renderPlayerUI(); renderAlarmList(); m.close(); toast('Metadata dikemas kini.', 'success'); }
+    catch (err) { toast('Gagal menyimpan metadata.', 'error'); }
+  });
+}
+async function deleteSong(id) {
+  const s = songById(id); if (!s) return;
+  const used = alarms.filter(a => a.songId === id).length;
+  const ok = await confirmDialog({ title: 'Padam lagu?', message: `"${s.title}" akan dipadam daripada pelayar ini.${used ? ` ${used} penggera menggunakan lagu ini dan akan memaparkan "Music File Missing" (nada lalai digunakan).` : ''}`, okText: 'Padam', danger: true });
+  if (!ok) return;
+  try {
+    if (pl.id === id) playerReset();
+    await DB.deleteSong(id); songs = songs.filter(x => x.id !== id); purgeSong(id);
+    if (settings.defaultSongId === id) { settings.defaultSongId = null; saveSettings(); }
+    renderSongList(); renderAlarmList(); renderStatus(); toast('Lagu dipadam.', 'success');
+  } catch (e) { toast('Gagal memadam lagu.', 'error'); }
+}
+function openSetAlarmMusic(id) {
+  const s = songById(id); if (!s) return;
+  const opts = [...alarms].sort((a, b) => a.time.localeCompare(b.time)).map(a => `<option value="${a.id}" ${a.songId === id ? 'selected' : ''}>${esc(a.name)} — ${fmtHM(a.time)}</option>`).join('');
+  const m = openModal(`<h3 class="modal-title">Jadikan Muzik Penggera</h3><p class="muted mt-2">"${esc(s.title)}"</p>
+    <form id="amForm" class="mt-4">
+      <label class="field"><span class="fl">Gunakan untuk</span><select id="amTarget" class="input"><option value="__default" ${settings.defaultSongId === id ? 'selected' : ''}>Lalai untuk penggera baharu</option>${opts}</select></label>
+      ${alarms.length ? '' : '<p class="muted small">Belum ada penggera. Lagu ini akan menjadi pilihan lalai untuk penggera baharu.</p>'}
+      <div class="modal-actions"><button type="button" class="btn" data-close>Batal</button><button class="btn btn-primary" type="submit">Simpan</button></div>
+    </form>`);
+  $('#amForm', m.el).addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('#amTarget', m.el).value;
+    if (v === '__default') { settings.defaultSongId = id; saveSettings(); toast('Dijadikan muzik lalai untuk penggera baharu.', 'success'); }
+    else { const a = alarmById(v); if (!a) return; a.songId = id; saveAlarms(); toast(`Muzik "${a.name}" ditetapkan.`, 'success'); }
+    renderSongList(); renderAlarmList(); renderStatus(); m.close();
+  });
+}
+
+/* ============================== Alarm engine ============================== */
+const trigKey = (a, t) => `${a.id}@${t.getTime()}`;
+function candidateTriggers(a, now) {
+  const [h, m] = a.time.split(':').map(Number), out = [];
+  if (!a.repeat.length) { if (a.date) out.push(parseLocal(a.date, a.time)); }
+  else for (let i = 0; i >= -1; i--) { const t = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, h, m, 0, 0); if (a.repeat.includes(t.getDay())) out.push(t); }
+  return out;
+}
+function nextTrigger(a, from = new Date()) {
+  const [h, m] = a.time.split(':').map(Number);
+  if (!a.repeat.length) { if (!a.date) return null; const t = parseLocal(a.date, a.time); return t > from ? t : null; }
+  for (let i = 0; i <= 7; i++) { const t = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i, h, m, 0, 0); if (a.repeat.includes(t.getDay()) && t > from) return t; }
+  return null;
+}
+function dueTrigger(a, now) {
+  for (const t of candidateTriggers(a, now)) { const d = now - t; if (d >= 0 && d <= GRACE_MS && !fired[trigKey(a, t)]) return t; }
+  return null;
+}
+function suppressRecent(a) { // elak bunyi serta-merta untuk waktu yang baru sahaja berlalu
+  const now = new Date();
+  candidateTriggers(a, now).forEach(t => { const d = now - t; if (d >= 0 && d <= GRACE_MS) fired[trigKey(a, t)] = Date.now(); });
+  saveFired();
+}
+function clearAlarmRuntime(id) {
+  snoozes = snoozes.filter(s => s.alarmId !== id); saveSnoozes();
+  Object.keys(fired).forEach(k => { if (k.startsWith(id + '@')) delete fired[k]; }); saveFired();
+}
+function getNextEvent(now = new Date()) {
+  let best = null;
+  for (const a of alarms) { if (!a.enabled) continue; const t = nextTrigger(a, now); if (t && (!best || t < best.t)) best = { a, t, snooze: false }; }
+  for (const s of snoozes) { const a = alarmById(s.alarmId); if (!a) continue; const t = new Date(s.at); if (!best || t < best.t) best = { a, t, snooze: true }; }
+  return best;
+}
+function checkAlarms(now) {
+  for (const s of snoozes.filter(x => x.at <= now.getTime())) {
+    snoozes = snoozes.filter(x => x !== s); saveSnoozes();
+    const a = alarmById(s.alarmId); if (a) ringStart(a, s.key, s.count, false);
+  }
+  let changed = false; const missed = [];
+  for (const a of alarms) {
+    if (!a.enabled) continue;
+    const t = dueTrigger(a, now);
+    if (t) {
+      const key = trigKey(a, t); fired[key] = Date.now(); saveFired();
+      if (!a.repeat.length) { a.enabled = false; changed = true; }
+      ringStart(a, key, 0, false); continue;
+    }
+    if (!a.repeat.length && a.date && now - parseLocal(a.date, a.time) > GRACE_MS) { a.enabled = false; changed = true; missed.push(a.name); }
+  }
+  if (changed) { saveAlarms(); renderAlarmList(); renderStatus(); }
+  if (missed.length) toast(`Penggera terlepas (halaman tidak aktif): ${missed.join(', ')}`, 'warn', 7000);
+}
+
+/* ---------- ringing ---------- */
+const ring = { active: false, alarm: null, key: null, count: 0, test: false, url: null, blocked: false, usingBeep: false, vol: 80, muted: false, startedAt: 0, flash: null };
+const ringAudio = new Audio(); ringAudio.loop = true; ringAudio.preload = 'auto';
+function revokeRingUrl() { if (ring.url) { URL.revokeObjectURL(ring.url); ring.url = null; } }
+function stopRingSound() { try { ringAudio.pause(); } catch (e) {} stopBeep(); if (ringAudio.getAttribute('src')) { ringAudio.removeAttribute('src'); ringAudio.load(); } revokeRingUrl(); }
+function applyRingVolume() {
+  ringAudio.volume = ring.vol / 100; ringAudio.muted = ring.muted;
+  if (beep.gain) beep.gain.gain.value = ring.muted ? 0 : ring.vol / 100;
+}
+function setBlocked(b) { ring.blocked = b; $('#ringBlocked').classList.toggle('is-hidden', !b); renderStatus(); }
+function ringSongName(a) {
+  const m = a.songId && songById(a.songId);
+  return m ? songLabel(m) : (a.songId ? 'File muzik tiada — nada lalai digunakan' : 'Nada lalai');
+}
+function updateRingText() {
+  if (!ring.active) return; const a = ring.alarm;
+  $('#ringName').textContent = a.name;
+  const note = $('#ringNote'); note.textContent = a.note || ''; note.classList.toggle('is-hidden', !a.note);
+  $('#ringSong').textContent = ringSongName(a);
+  $('#ringTag').textContent = ring.test ? 'Mod ujian' : (ring.count ? `Snooze ke-${ring.count}` : 'Penggera');
+  const sb = $('#btnSnooze'), max = settings.maxSnooze, left = max === 0 ? Infinity : max - ring.count;
+  sb.classList.toggle('is-hidden', ring.test);
+  sb.disabled = left <= 0;
+  sb.textContent = left <= 0 ? 'HAD SNOOZE DICAPAI' : `SNOOZE ${a.snooze} MINIT` + (max ? ` · baki ${left}` : '');
+  $('#ringVol').value = ring.muted ? 0 : ring.vol; $('#ringVolVal').textContent = (ring.muted ? 0 : ring.vol) + '%';
+  setIcon($('#ringMute'), (ring.muted || ring.vol === 0) ? 'volume-x' : 'volume-2');
+}
+async function ringStart(alarm, key, count = 0, test = false) {
+  if (ring.active) { if (ring.key !== key && !ringQueue.some(q => q.key === key)) ringQueue.push({ alarm, key, count, test }); return; }
+  Object.assign(ring, { active: true, alarm, key, count, test, blocked: false, usingBeep: false, vol: clamp(alarm.volume, 0, 100), muted: false, startedAt: Date.now() });
+  if (!test) LS.set(KEYS.ringing, { alarmId: alarm.id, key, count, startedAt: ring.startedAt });
+  pausePlayer();
+  $('#ring').classList.remove('is-hidden'); document.body.classList.add('no-scroll');
+  $('#ringBlocked').classList.add('is-hidden');
+  updateRingText(); updateClocks(new Date(), true);
+  ring.flash = setInterval(() => { document.title = document.title.startsWith('⏰') ? 'Personal Smart Alarm' : '⏰ ' + alarm.name; }, 900);
+  notifyRing(alarm);
+  renderStatus();
+  setTimeout(() => { const b = $('#btnStop'); if (b) b.focus(); }, 50);
+  await playRingSound();
+}
+async function playRingSound() {
+  if (!ring.active) return;
+  const a = ring.alarm; stopRingSound(); ring.usingBeep = false;
+  const c = ensureCtx(); try { if (c && c.state !== 'running') await c.resume(); } catch (e) {}
+  audioUnlocked = !c || c.state === 'running';
+  let blob = null;
+  if (a.songId && songById(a.songId)) { try { blob = await DB.getBlob(a.songId); } catch (e) {} }
+  if (!ring.active) return;
+  if (a.songId && !blob) { toast('Music File Missing — nada lalai digunakan.', 'warn', 6000); renderStatus(); }
+  if (blob) {
+    ring.url = URL.createObjectURL(blob); ringAudio.src = ring.url; ringAudio.loop = true;
+    applyRingVolume(); attach(ringAudio);
+    try { await ringAudio.play(); setBlocked(false); return; }
+    catch (e) {
+      if (e && e.name === 'NotAllowedError') { setBlocked(true); return; }
+      if (e && e.name === 'AbortError') return;
+      toast('Gagal memainkan lagu. Menggunakan nada lalai.', 'error'); stopRingSound();
+    }
+  }
+  try { startBeep(ring.vol / 100); ring.usingBeep = true; applyRingVolume(); setBlocked(false); }
+  catch (e) { setBlocked(true); }
+}
+ringAudio.addEventListener('error', () => { if (ring.active && ringAudio.getAttribute('src')) { toast('Fail muzik rosak. Menggunakan nada lalai.', 'error'); stopRingSound(); try { startBeep(ring.vol / 100); ring.usingBeep = true; } catch (e) { setBlocked(true); } } });
+function endRing() {
+  if (!ring.active) return;
+  stopRingSound(); clearInterval(ring.flash); ring.flash = null; document.title = 'Personal Smart Alarm';
+  ring.active = false; ring.blocked = false;
+  $('#ring').classList.add('is-hidden'); document.body.classList.remove('no-scroll');
+  LS.remove(KEYS.ringing); renderStatus(); updateNextCard(new Date());
+  const n = ringQueue.shift(); if (n) setTimeout(() => ringStart(n.alarm, n.key, n.count, n.test), 500);
+}
+function ringStop() {
+  if (!ring.active) return;
+  snoozes = snoozes.filter(s => s.key !== ring.key); saveSnoozes(); // batalkan snooze tertunda
+  const wasTest = ring.test; endRing();
+  toast(wasTest ? 'Ujian dihentikan.' : 'Penggera dihentikan.', 'success');
+}
+function ringSnooze() {
+  if (!ring.active || ring.test) return;
+  const a = ring.alarm, max = settings.maxSnooze;
+  if (max > 0 && ring.count >= max) { toast('Had snooze telah dicapai. Tekan STOP.', 'warn'); return; }
+  const at = Date.now() + a.snooze * 60000;
+  snoozes = snoozes.filter(s => s.key !== ring.key); // elak timer snooze berganda
+  snoozes.push({ key: ring.key, alarmId: a.id, at, count: ring.count + 1 }); saveSnoozes();
+  endRing(); toast(`Snooze ${a.snooze} minit — berbunyi semula pada ${fmtHM(`${pad(new Date(at).getHours())}:${pad(new Date(at).getMinutes())}`)}.`, 'info', 5000);
+}
+function monitorRing() {
+  if (!ring.active || !ctx) return;
+  if (ctx.state !== 'running') { ctx.resume().catch(() => {}); if (ring.usingBeep || sources.has(ringAudio)) { if (!ring.blocked) setBlocked(true); } }
+  else if (ring.blocked && (ring.usingBeep || (sources.has(ringAudio) && !ringAudio.paused))) setBlocked(false);
+  if (ring.active && !ring.blocked && !ring.usingBeep && ringAudio.paused && ringAudio.getAttribute('src')) ringAudio.play().catch(() => {});
+}
+function testAlarm(custom) {
+  const base = custom || {};
+  const sid = base.songId !== undefined ? base.songId : ((settings.defaultSongId && songById(settings.defaultSongId)) ? settings.defaultSongId : (songs[0] ? songs[0].id : null));
+  const now = new Date();
+  ringStart({ id: '__test__', name: base.name || 'Test Alarm', time: `${pad(now.getHours())}:${pad(now.getMinutes())}`, date: '', repeat: [], songId: sid, volume: base.volume ?? settings.volume, snooze: base.snooze ?? settings.snooze, enabled: true, note: 'Ini hanyalah ujian penggera.' }, 'test@' + Date.now(), 0, true);
+}
+function notifyRing(a) {
+  if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
+  try { const n = new Notification('⏰ ' + a.name, { body: a.note || tr(`Waktu penggera ${fmtHM(a.time)}`), tag: 'psa-ring', requireInteraction: true }); n.onclick = () => { window.focus(); n.close(); }; } catch (e) {}
+}
+async function setNotify(on) {
+  if (!on) { settings.notify = false; saveSettings(); return; }
+  if (!('Notification' in window)) { toast('Pelayar ini tidak menyokong notifikasi.', 'error'); return; }
+  let p = Notification.permission;
+  if (p === 'default') { try { p = await Notification.requestPermission(); } catch (e) {} }
+  if (p !== 'granted') { toast('Kebenaran notifikasi tidak diberikan. Anda boleh mengubahnya melalui tetapan tapak pelayar.', 'warn', 6000); return; }
+  settings.notify = true; saveSettings(); toast('Notifikasi diaktifkan. Ingat: notifikasi tidak menjamin audio berbunyi.', 'success', 5000);
+}
+let wake = null;
+async function syncWake() {
+  try {
+    if (settings.keepAwake && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+      if (!wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
+    } else if (wake) { await wake.release(); wake = null; }
+  } catch (e) { wake = null; }
+}
+
+/* ============================== Alarm CRUD UI ============================== */
+function presetDays(p) { return p === 'daily' ? [0,1,2,3,4,5,6] : p === 'weekdays' ? [1,2,3,4,5] : p === 'weekend' ? [0,6] : []; }
+function renderAlarmList() {
+  const box = $('#alarmList');
+  if (!alarms.length) { box.innerHTML = `<div class="glass empty"><i data-lucide="alarm-clock-off"></i><p>Belum ada penggera. Tekan <b>Add Alarm</b> untuk mencipta yang pertama.</p></div>`; icons(); return; }
+  const now = new Date();
+  box.innerHTML = [...alarms].sort((a, b) => a.time.localeCompare(b.time) || a.name.localeCompare(b.name)).map(a => {
+    const song = a.songId ? songById(a.songId) : null;
+    const songTxt = song ? esc(songLabel(song)) : (a.songId ? '⚠ Music File Missing' : 'Nada lalai');
+    return `<article class="glass alarm-card ${a.enabled ? '' : 'off'}" data-id="${a.id}">
+      <div class="ac-main"><div class="ac-time">${fmtHM(a.time)}</div>
+        <div class="ac-info"><div class="ac-name">${esc(a.name)}</div>
+          <div class="ac-meta">${esc(repeatText(a))} · ♪ ${songTxt} · Vol ${a.volume}% · Snooze ${a.snooze} min</div>
+          ${a.note ? `<div class="ac-note">${esc(a.note)}</div>` : ''}
+          <div class="ac-next" data-next="${a.id}">${nextText(a, now)}</div></div></div>
+      <div class="ac-actions">
+        <label class="switch"><input type="checkbox" data-act="alarm-toggle" data-id="${a.id}" ${a.enabled ? 'checked' : ''} aria-label="Aktif atau tidak aktif: ${esc(a.name)}"><span></span></label>
+        <button class="btn btn-icon" data-act="alarm-edit" data-id="${a.id}" aria-label="Edit ${esc(a.name)}"><i data-lucide="pencil"></i></button>
+        <button class="btn btn-icon" data-act="alarm-del" data-id="${a.id}" aria-label="Padam ${esc(a.name)}"><i data-lucide="trash-2"></i></button>
+      </div></article>`;
+  }).join('');
+  icons();
+}
+function nextText(a, now) {
+  if (!a.enabled) return 'Tidak aktif';
+  const t = nextTrigger(a, now);
+  return t ? 'Seterusnya: ' + fmtWhen(t) : 'Waktu telah berlalu';
+}
+function updateAlarmNextTexts() { const now = new Date(); $$('[data-next]').forEach(el => { const a = alarmById(el.dataset.next); if (a) el.textContent = nextText(a, now); }); }
+function toggleAlarm(id, on) {
+  const a = alarmById(id); if (!a) return;
+  a.enabled = on;
+  if (on) {
+    if (!a.repeat.length && (!a.date || parseLocal(a.date, a.time) <= new Date())) a.date = onceDateFor(a.time);
+    suppressRecent(a);
+  } else { snoozes = snoozes.filter(s => s.alarmId !== id); saveSnoozes(); }
+  saveAlarms(); renderAlarmList(); renderStatus(); updateNextCard(new Date());
+  toast(`"${a.name}" ${on ? 'diaktifkan' : 'dinyahaktifkan'}.`, on ? 'success' : 'info');
+}
+async function deleteAlarm(id) {
+  const a = alarmById(id); if (!a) return;
+  const ok = await confirmDialog({ title: 'Padam penggera?', message: `Penggera "${a.name}" (${fmtHM(a.time)}) akan dipadam secara kekal.`, okText: 'Padam', danger: true });
+  if (!ok) return;
+  clearAlarmRuntime(id); alarms = alarms.filter(x => x.id !== id); saveAlarms();
+  renderAlarmList(); renderStatus(); renderSongList(); updateNextCard(new Date()); toast('Penggera dipadam.', 'success');
+}
+function openAlarmModal(existing) {
+  const now = new Date();
+  const t5 = new Date(Math.ceil((now.getTime() + 60000) / 300000) * 300000);
+  const draft = existing ? { ...existing, repeat: [...existing.repeat] } : {
+    name: '', time: `${pad(t5.getHours())}:${pad(t5.getMinutes())}`, date: '', repeat: presetDays(settings.repeatDefault),
+    songId: (settings.defaultSongId && songById(settings.defaultSongId)) ? settings.defaultSongId : null,
+    volume: settings.volume, snooze: settings.snooze, enabled: true, note: ''
+  };
+  const days = new Set(draft.repeat);
+  const songOpts = `<option value="">Nada lalai (beep)</option>` + [...songs].sort((a, b) => a.title.localeCompare(b.title)).map(s => `<option value="${s.id}" ${draft.songId === s.id ? 'selected' : ''}>${esc(songLabel(s))}</option>`).join('')
+    + (draft.songId && !songById(draft.songId) ? `<option value="${esc(draft.songId)}" selected>⚠ File muzik tiada</option>` : '');
+  const m = openModal(`<h3 class="modal-title">${existing ? 'Edit Penggera' : 'Penggera Baharu'}</h3>
+    <form id="afForm" class="mt-4" novalidate>
+      <p id="afErr" class="form-error is-hidden" role="alert"></p>
+      <label class="field"><span class="fl">Nama penggera</span><input id="afName" class="input" maxlength="40" placeholder="cth. Bangun pagi" value="${esc(draft.name)}"></label>
+      <label class="field"><span class="fl">Waktu</span><input id="afTime" type="time" class="input" value="${draft.time}" required></label>
+      <div class="field"><span class="fl">Ulang</span>
+        <div class="daychips" id="afDays">${DAYS.map((d, i) => `<button type="button" class="daychip" data-day="${i}" aria-pressed="${days.has(i)}" aria-label="${DAYS_LONG[i]}">${d}</button>`).join('')}</div>
+        <div class="presets"><button type="button" data-preset="once">Sekali sahaja</button><button type="button" data-preset="daily">Setiap hari</button><button type="button" data-preset="weekdays">Isnin–Jumaat</button><button type="button" data-preset="weekend">Hujung minggu</button></div>
+      </div>
+      <label class="field" id="afDateRow"><span class="fl">Tarikh (untuk penggera sekali sahaja)</span><input id="afDate" type="date" class="input" value="${draft.date || onceDateFor(draft.time)}"></label>
+      <label class="field"><span class="fl">Lagu penggera</span><select id="afSong" class="input">${songOpts}</select></label>
+      <div class="field"><span class="fl">Volume</span><div class="range-row"><input id="afVol" type="range" min="0" max="100" step="1" value="${draft.volume}" aria-label="Volume penggera"><output id="afVolVal">${draft.volume}%</output></div></div>
+      <label class="field"><span class="fl">Tempoh snooze</span><select id="afSnooze" class="input">${SNOOZE_OPTS.map(n => `<option value="${n}" ${draft.snooze === n ? 'selected' : ''}>${n} minit</option>`).join('')}</select></label>
+      <label class="field"><span class="fl">Nota (pilihan)</span><textarea id="afNote" class="input" maxlength="200" placeholder="Nota ringkas…">${esc(draft.note)}</textarea></label>
+      <div class="row" style="border:0;padding-top:0"><div><b>Aktif</b><small>Penggera akan berbunyi pada waktunya</small></div>
+        <label class="switch"><input id="afEnabled" type="checkbox" ${draft.enabled ? 'checked' : ''} aria-label="Penggera aktif"><span></span></label></div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="afTest" style="margin-right:auto"><i data-lucide="zap"></i>Uji bunyi</button>
+        <button type="button" class="btn" data-close>Batal</button><button class="btn btn-primary" type="submit">Simpan</button>
+      </div>
+    </form>`);
+  const el = m.el, $f = s => $(s, el);
+  let dateTouched = !!draft.date;
+  const syncDays = () => { $$('.daychip', el).forEach(b => b.setAttribute('aria-pressed', String(days.has(Number(b.dataset.day))))); $f('#afDateRow').classList.toggle('is-hidden', days.size > 0); };
+  const showErr = (msg, field) => { const er = $f('#afErr'); er.textContent = msg; er.classList.remove('is-hidden'); if (field) field.focus(); };
+  syncDays();
+  $f('#afDays').addEventListener('click', e => { const b = e.target.closest('.daychip'); if (!b) return; const d = Number(b.dataset.day); days.has(d) ? days.delete(d) : days.add(d); syncDays(); });
+  el.querySelector('.presets').addEventListener('click', e => { const b = e.target.closest('[data-preset]'); if (!b) return; days.clear(); presetDays(b.dataset.preset).forEach(d => days.add(d)); syncDays(); });
+  $f('#afDate').addEventListener('input', () => { dateTouched = true; });
+  $f('#afTime').addEventListener('input', () => { if (!dateTouched && validTime($f('#afTime').value)) $f('#afDate').value = onceDateFor($f('#afTime').value); });
+  $f('#afVol').addEventListener('input', () => { $f('#afVolVal').textContent = $f('#afVol').value + '%'; });
+  $f('#afTest').addEventListener('click', () => { testAlarm({ name: $f('#afName').value.trim() || 'Uji bunyi', songId: $f('#afSong').value || null, volume: num($f('#afVol').value, 0, 100, 80), snooze: Number($f('#afSnooze').value) }); });
+  $f('#afForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $f('#afName').value.trim().slice(0, 40) || 'Penggera';
+    const time = $f('#afTime').value;
+    if (!validTime(time)) return showErr('Sila pilih waktu penggera yang sah.', $f('#afTime'));
+    const repeat = [...days].sort(), enabled = $f('#afEnabled').checked;
+    let date = '';
+    if (!repeat.length) {
+      date = $f('#afDate').value || onceDateFor(time);
+      if (!validDateStr(date)) return showErr('Tarikh tidak sah.', $f('#afDate'));
+      if (enabled && parseLocal(date, time) <= new Date()) return showErr('Waktu penggera sekali sahaja ini sudah berlalu. Pilih tarikh atau waktu akan datang, atau nyahaktifkan penggera.', $f('#afDate'));
+    }
+    const sid = $f('#afSong').value || null;
+    const snooze = Number($f('#afSnooze').value);
+    if (!SNOOZE_OPTS.includes(snooze)) return showErr('Tempoh snooze tidak sah.', $f('#afSnooze'));
+    const rec = { id: existing ? existing.id : uid(), name, time, date, repeat, songId: sid, volume: num($f('#afVol').value, 0, 100, 80), snooze, enabled, note: $f('#afNote').value.trim().slice(0, 200), createdAt: existing ? existing.createdAt : Date.now() };
+    if (existing) { clearAlarmRuntime(rec.id); alarms[alarms.findIndex(a => a.id === rec.id)] = rec; } else alarms.push(rec);
+    if (rec.enabled) suppressRecent(rec);
+    saveAlarms(); renderAlarmList(); renderStatus(); renderSongList(); updateNextCard(new Date()); m.close();
+    toast(existing ? 'Penggera dikemas kini.' : 'Penggera ditambah.', 'success');
+  });
+}
+
+/* ============================== Status & dashboard ============================== */
+function computeStatuses() {
+  const act = alarms.filter(a => a.enabled), out = [];
+  if (act.length) out.push({ k: 'ok', icon: 'check-circle-2', t: 'Alarm Ready', d: `${act.length} penggera aktif sedang dipantau.` });
+  else out.push({ k: 'idle', icon: 'moon', t: 'Tiada Penggera Aktif', d: 'Tambah atau aktifkan penggera untuk bermula.' });
+  const missing = act.filter(a => a.songId && !songById(a.songId));
+  if (missing.length) out.push({ k: 'warn', icon: 'file-x', t: 'Music File Missing', d: `"${missing[0].name}"${missing.length > 1 ? ` dan ${missing.length - 1} lagi` : ''} menggunakan lagu yang tiada. Nada lalai akan dimainkan.` });
+  if (!audioUnlocked) out.push({ k: 'warn', icon: 'volume-x', t: 'Audio Permission Needed', d: 'Pelayar memerlukan satu interaksi pada halaman ini sebelum audio dibenarkan.', unlock: true });
+  out.push({ k: 'info', icon: 'info', t: 'Background Playback Limited', d: 'Penggera paling boleh diharapkan semasa halaman ini terbuka. Tab latar belakang atau telefon berkunci mungkin menyekat bunyi.' });
+  return out;
+}
+function renderStatus() {
+  const st = computeStatuses();
+  $('#statusList').innerHTML = st.map(s => `<div class="status-row"><span class="chip chip-${s.k}"><i data-lucide="${s.icon}"></i>${s.t}</span><p>${esc(s.d)}</p>${s.unlock ? '<button class="btn btn-sm mt-2" data-act="unlock"><i data-lucide="volume-2"></i>Benarkan Audio</button>' : ''}</div>`).join('');
+  $('#sideStatus').innerHTML = st.filter(s => s.k !== 'idle').map(s => `<span class="chip chip-${s.k}"><i data-lucide="${s.icon}"></i>${s.t}</span>`).join('');
+  icons();
+}
+let lastSec = -1;
+function updateClocks(now, force) {
+  const sec = now.getSeconds(); if (sec === lastSec && !force) return; lastSec = sec;
+  const c = fmtClock(now);
+  $('#clkH').textContent = c.h; $('#clkM').textContent = c.m; $('#clkS').textContent = c.s; $('#clkAP').textContent = c.ap;
+  const s = $('#clkS'); s.classList.remove('pop'); void s.offsetWidth; s.classList.add('pop');
+  $('#dateText').textContent = now.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  if (ring.active) { $('#rH').textContent = c.h; $('#rM').textContent = c.m; $('#rS').textContent = c.s; $('#rAP').textContent = c.ap; }
+}
+function updateNextCard(now) {
+  const ev = getNextEvent(now), act = alarms.filter(a => a.enabled).length;
+  const st = $('#nextState');
+  if (!ev) {
+    st.textContent = 'OFF'; st.className = 'pill pill-off';
+    $('#nextName').textContent = 'Tiada penggera aktif'; $('#nextTime').textContent = alarms.length ? 'Aktifkan satu penggera untuk memulakan.' : 'Tambah penggera untuk bermula.';
+    $('#countdown').textContent = '--:--:--'; $('#nextSong').textContent = ''; $('#nextCount').textContent = `${act} daripada ${alarms.length} penggera aktif`;
+  } else {
+    st.textContent = 'ON'; st.className = 'pill pill-on';
+    $('#nextName').textContent = ev.a.name + (ev.snooze ? ' (snooze)' : '');
+    $('#nextTime').textContent = fmtWhen(ev.t);
+    $('#countdown').textContent = fmtCountdown(ev.t - now);
+    const song = ev.a.songId ? songById(ev.a.songId) : null;
+    $('#nextSong').textContent = '♪ ' + (song ? songLabel(song) : (ev.a.songId ? 'File muzik tiada (nada lalai)' : 'Nada lalai'));
+    $('#nextCount').textContent = `${act} daripada ${alarms.length} penggera aktif`;
+  }
+}
+function renderUpcoming() {
+  const now = new Date();
+  const list = alarms.filter(a => a.enabled).map(a => ({ a, t: nextTrigger(a, now) })).filter(x => x.t).sort((x, y) => x.t - y.t).slice(0, 4);
+  $('#upcomingList').innerHTML = list.length ? list.map(({ a, t }) => `<div class="row"><div><b>${esc(a.name)}</b><small>${esc(fmtWhen(t))} · ${esc(repeatText(a))}</small></div><span class="ac-time" style="font-size:1.3rem">${fmtHM(a.time)}</span></div>`).join('') : `<div class="empty" style="padding:14px"><p>Tiada penggera akan datang.</p></div>`;
+}
+
+/* ============================== Settings UI ============================== */
+function renderSettings() {
+  $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', settings[seg.dataset.seg] === b.dataset.val)));
+  $('#setVol').value = settings.volume; $('#setVolVal').textContent = settings.volume + '%';
+  $('#setSnooze').innerHTML = SNOOZE_OPTS.map(n => `<option value="${n}" ${settings.snooze === n ? 'selected' : ''}>${n} minit</option>`).join('');
+  $('#setMaxSnooze').innerHTML = MAX_SNOOZE_OPTS.map(n => `<option value="${n}" ${settings.maxSnooze === n ? 'selected' : ''}>${n === 0 ? 'Tanpa had' : n + ' kali'}</option>`).join('');
+  $('#setRepeat').value = settings.repeatDefault;
+  $('#setNotify').checked = settings.notify && 'Notification' in window && Notification.permission === 'granted';
+  $('#setWake').checked = settings.keepAwake;
+  $('#fmtBtnText').textContent = settings.format === '12' ? '12 jam' : '24 jam';
+  $('#themeBtnText').textContent = settings.theme === 'dark' ? 'Mod Cerah' : 'Mod Gelap';
+}
+function applyTheme() {
+  document.documentElement.dataset.theme = settings.theme;
+  const mt = document.querySelector('meta[name="theme-color"]'); if (mt) mt.content = settings.theme === 'dark' ? '#050816' : '#eef3ff';
+  bg.dirty = true;
+}
+function afterSettingsChange() { saveSettings(); renderSettings(); renderAlarmList(); renderUpcoming(); updateNextCard(new Date()); updateClocks(new Date(), true); if (ring.active) updateRingText(); }
+
+/* ============================== Import / Export / Reset ============================== */
+function exportData() {
+  const data = { app: 'personal-smart-alarm', version: 1, exportedAt: new Date().toISOString(), settings, alarms };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = `personal-smart-alarm-${toDateStr(new Date())}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast('Fail JSON dieksport (penggera & tetapan sahaja; fail lagu tidak termasuk).', 'success', 5000);
+}
+async function importData(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) return toast('Fail terlalu besar untuk diimport.', 'error');
+  let obj; try { obj = JSON.parse(await file.text()); } catch (e) { return toast('Fail bukan JSON yang sah.', 'error'); }
+  if (!obj || typeof obj !== 'object' || obj.app !== 'personal-smart-alarm' || !Array.isArray(obj.alarms)) return toast('Fail ini bukan eksport Personal Smart Alarm yang sah.', 'error', 5500);
+  const valid = [], ids = new Set(); let bad = 0;
+  obj.alarms.slice(0, 200).forEach(r => { const a = sanitizeAlarm(r); if (!a) { bad++; return; } if (ids.has(a.id)) a.id = uid(); ids.add(a.id); valid.push(a); });
+  const newSettings = obj.settings ? sanitizeSettings(obj.settings) : { ...settings };
+  const ok = await confirmDialog({ title: 'Import data?', message: `${alarms.length} penggera semasa akan digantikan dengan ${valid.length} penggera daripada fail${bad ? ` (${bad} rekod tidak sah diabaikan)` : ''}. Tetapan juga dikemas kini. Fail lagu tidak diimport — penggera yang merujuk lagu yang tiada akan guna nada lalai.`, okText: 'Import' });
+  if (!ok) return;
+  if (ring.active) ringStop();
+  alarms = valid; settings = newSettings;
+  if (settings.defaultSongId && !songById(settings.defaultSongId)) settings.defaultSongId = null;
+  snoozes = []; fired = {}; saveAlarms(); saveSettings(); saveFired(); saveSnoozes();
+  valid.filter(a => a.enabled).forEach(suppressRecent);
+  applyTheme(); applyPlayerVolume(); renderAll(); toast(`${valid.length} penggera diimport.`, 'success');
+}
+async function resetSettings() {
+  if (!await confirmDialog({ title: 'Reset tetapan?', message: 'Semua tetapan akan dikembalikan kepada nilai asal. Penggera dan lagu anda tidak akan dipadam.', okText: 'Reset' })) return;
+  settings = { ...DEFAULTS }; applyTheme(); applyPlayerVolume(); syncWake(); renderAll(); saveSettings(); toast('Tetapan telah di-reset.', 'success');
+}
+async function clearAllData() {
+  if (!await confirmDialog({ title: 'Padam SEMUA data?', message: 'Semua penggera, tetapan dan fail lagu pada pelayar ini akan dipadam secara kekal. Tindakan ini tidak boleh dibatalkan.', okText: 'Padam Semua', danger: true })) return;
+  if (ring.active) ringStop(); ringQueue = [];
+  playerReset();
+  try { if (DB.ok) await DB.clearAll(); } catch (e) { toast('Sebahagian fail lagu gagal dipadam.', 'error'); }
+  Object.values(KEYS).forEach(k => LS.remove(k));
+  settings = { ...DEFAULTS }; alarms = []; songs = []; fired = {}; snoozes = []; resetLibrary();
+  applyTheme(); applyPlayerVolume(); syncWake(); renderAll(); toast('Semua data telah dipadam.', 'success');
+}
+
+/* ============================== Navigation & rendering ============================== */
+function showView(v) {
+  currentView = v;
+  $$('.view').forEach(s => s.classList.toggle('is-hidden', s.id !== 'view-' + v));
+  $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  window.scrollTo({ top: 0 });
+  if (v === 'dashboard') renderUpcoming();
+}
+function renderAll() {
+  renderSettings(); renderAlarmList(); renderSongList(); renderPlayerUI(); renderStatus(); renderUpcoming(); updateNextCard(new Date()); updateClocks(new Date(), true); showView(currentView);
+}
+
+/* ============================== Canvas: background ============================== */
+const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PARTICLE_COLORS = [[34,211,238],[59,130,246],[168,85,247]];
+const bg = { c: $('#bgCanvas'), g: null, w: 0, h: 0, stars: [], parts: [], dirty: true };
+function bgResize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2); bg.w = innerWidth; bg.h = innerHeight;
+  bg.c.width = Math.round(bg.w * dpr); bg.c.height = Math.round(bg.h * dpr); bg.g = bg.c.getContext('2d'); bg.g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const ns = clamp(Math.round(bg.w * bg.h / 9000), 60, 220), np = clamp(Math.round(bg.w / 45), 16, 42);
+  bg.stars = Array.from({ length: ns }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + .3, p: Math.random() * 6.28, s: Math.random() * 1.5 + .5 }));
+  bg.parts = Array.from({ length: np }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 3 + 1.5, v: Math.random() * .00004 + .00001, h: PARTICLE_COLORS[Math.floor(Math.random() * 3)], p: Math.random() * 6.28 }));
+  bg.dirty = true;
+}
+function bgDraw(t) {
+  const g = bg.g, w = bg.w, h = bg.h, L = settings.theme === 'light';
+  g.clearRect(0, 0, w, h);
+  const blobs = [{ x: .18, y: .22, r: .55, c: '59,130,246' }, { x: .82, y: .18, r: .5, c: '168,85,247' }, { x: .55, y: .88, r: .6, c: '34,211,238' }];
+  blobs.forEach((b, i) => {
+    const x = (b.x + Math.sin(t / 9000 + i * 2.1) * .09) * w, y = (b.y + Math.cos(t / 11000 + i * 1.7) * .08) * h, r = b.r * Math.max(w, h) * .62;
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${b.c},${L ? .16 : .22})`); gr.addColorStop(1, `rgba(${b.c},0)`);
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  bg.stars.forEach(s => {
+    const a = (.35 + .65 * (.5 + .5 * Math.sin(t / 900 * s.s + s.p))) * (L ? .45 : 1);
+    g.fillStyle = L ? `rgba(60,90,200,${a})` : `rgba(210,225,255,${a})`;
+    g.beginPath(); g.arc(s.x * w, s.y * h, s.r, 0, 6.283); g.fill();
+  });
+  bg.parts.forEach(p => {
+    p.y -= p.v * 16; if (p.y < -.05) { p.y = 1.05; p.x = Math.random(); }
+    const x = (p.x + Math.sin(t / 3000 + p.p) * .015) * w, y = p.y * h, a = .5 + .5 * Math.sin(t / 1200 + p.p);
+    const gr = g.createRadialGradient(x, y, 0, x, y, p.r * 6); gr.addColorStop(0, `rgba(${p.h[0]},${p.h[1]},${p.h[2]},${(L ? .35 : .55) * a})`); gr.addColorStop(1, `rgba(${p.h[0]},${p.h[1]},${p.h[2]},0)`);
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, p.r * 6, 0, 6.283); g.fill();
+  });
+}
+
+/* ============================== Canvas: visualizers ============================== */
+function fitCanvas(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return null;
+  const pw = Math.round(w * dpr), ph = Math.round(h * dpr); if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); return { g, w, h };
+}
+const isPlaying = () => (!player.paused && !player.ended) || (ring.active && !ring.blocked);
+function getBins(n, t, mode) {
+  const out = new Array(n).fill(0), playing = isPlaying();
+  let real = false;
+  if (playing && master && ctx && ctx.state === 'running') {
+    master.getByteFrequencyData(freqBuf); let sum = 0; for (let i = 0; i < freqBuf.length; i++) sum += freqBuf[i];
+    if (sum > 0) { real = true; const span = Math.floor(freqBuf.length * .7); for (let i = 0; i < n; i++) { const idx = Math.floor(Math.pow(i / n, 1.35) * span); out[i] = freqBuf[idx] / 255; } }
+  }
+  if (!real) {
+    const amp = playing ? .55 : (mode === 'ring' ? .22 : .08);
+    for (let i = 0; i < n; i++) out[i] = clamp(amp * (.55 + .45 * Math.sin(t / (playing ? 160 : 520) + i * .55)) * (.6 + .4 * Math.sin(t / 700 + i * .21)), 0, 1);
+  }
+  return out;
+}
+function rr(g, x, y, w, h, r) { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); g.fill(); }
+function drawBars(cv, t, mirror) {
+  const f = fitCanvas(cv); if (!f) return; const { g, w, h } = f; g.clearRect(0, 0, w, h);
+  const n = clamp(Math.floor(w / 11), 16, 90), bins = getBins(n, t, 'bars'), bw = w / n;
+  const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#22d3ee'); gr.addColorStop(.5, '#3b82f6'); gr.addColorStop(1, '#a855f7');
+  g.fillStyle = gr; g.shadowColor = 'rgba(34,211,238,.6)'; g.shadowBlur = 8;
+  for (let i = 0; i < n; i++) {
+    const bh = Math.max(3, bins[i] * h * (mirror ? .46 : .92)), x = i * bw + bw * .18, ww = bw * .64;
+    if (mirror) rr(g, x, h / 2 - bh, ww, bh * 2, 4); else rr(g, x, h - bh, ww, bh, 4);
+  }
+  g.shadowBlur = 0;
+}
+function drawRing(cv, t) {
+  const f = fitCanvas(cv); if (!f) return; const { g, w, h } = f; g.clearRect(0, 0, w, h);
+  const n = 72, bins = getBins(n, t, 'ring'), cx = w / 2, cy = h * .42, r0 = Math.min(w, h) * .27, rmax = Math.min(w, h) * .2;
+  g.lineCap = 'round'; g.lineWidth = Math.max(3, Math.min(w, h) * .008);
+  for (let i = 0; i < n; i++) {
+    const a = i / n * 6.2832 - 1.5708 + t / 9000, len = 6 + bins[i] * rmax, hue = 190 + (i / n) * 120;
+    g.strokeStyle = `hsla(${hue},95%,65%,${.45 + bins[i] * .5})`; g.beginPath();
+    g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len)); g.stroke();
+  }
+  const m = clamp(Math.floor(w / 14), 20, 70), b2 = getBins(m, t + 400, 'ring'), bw = w / m;
+  for (let i = 0; i < m; i++) { const bh = 4 + b2[i] * h * .16; g.fillStyle = `hsla(${190 + i / m * 120},90%,62%,.55)`; g.fillRect(i * bw + bw * .2, h - bh, bw * .6, bh); }
+}
+let lastFrame = 0;
+function frame(t) {
+  requestAnimationFrame(frame);
+  if (document.hidden || t - lastFrame < 32) return; lastFrame = t;
+  if (!reduced || bg.dirty) { bgDraw(t); bg.dirty = false; }
+  if (ring.active) drawRing($('#ringViz'), t);
+  else if (currentView === 'dashboard') drawBars($('#dashViz'), t, true);
+  else if (currentView === 'music') drawBars($('#playerViz'), t, false);
+}
+
+/* ============================== Library extras: playlist, queue, sort, group, shuffle ============================== */
+const SORTS = { added: s => s.addedAt, title: s => s.title.toLowerCase(), artist: s => (s.artist || '').toLowerCase(), duration: s => s.duration, size: s => s.size, manual: () => 0 };
+const GROUP_FIELDS = ['none', 'artist', 'letter', 'format'];
+const LIB_DEFAULTS = { sort: 'added', dir: 'desc', group: 'none', view: 'all', shuffle: false, repeat: 'off', auto: true };
+const MAX_PLAYLISTS = 100;
+let playlists = [];
+const lib = { ...LIB_DEFAULTS, queue: [], history: [], played: new Set(), order: [] };
+const currentPlaylist = () => playlists.find(p => p.id === lib.view) || null;
+const randomOf = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/* ---------- persistence ---------- */
+function saveLib() {
+  LS.set(KEYS.playlists, playlists);
+  LS.set(KEYS.libprefs, { order: lib.order, sort: lib.sort, dir: lib.dir, group: lib.group, view: lib.view, shuffle: lib.shuffle, repeat: lib.repeat, auto: lib.auto });
+}
+function loadLibrary() {
+  const raw = LS.get(KEYS.playlists, []);
+  playlists = (Array.isArray(raw) ? raw : []).filter(p => p && typeof p.id === 'string' && typeof p.name === 'string').slice(0, MAX_PLAYLISTS).map(p => ({
+    id: p.id,
+    name: p.name.trim().slice(0, 40) || 'Playlist',
+    songIds: [...new Set(Array.isArray(p.songIds) ? p.songIds.filter(x => typeof x === 'string') : [])].filter(id => !DB.ok || songById(id))
+  }));
+  const prefs = LS.get(KEYS.libprefs, {}) || {};
+  const pick = (v, allowed, d) => allowed.includes(v) ? v : d;
+  Object.assign(lib, {
+    sort: pick(prefs.sort, Object.keys(SORTS), LIB_DEFAULTS.sort), dir: pick(prefs.dir, ['asc', 'desc'], LIB_DEFAULTS.dir),
+    group: pick(prefs.group, GROUP_FIELDS, 'none'), repeat: pick(prefs.repeat, ['off', 'all', 'one'], 'off'),
+    order: Array.isArray(prefs.order) ? prefs.order.filter(x => typeof x === 'string') : [], shuffle: prefs.shuffle === true, auto: prefs.auto !== false, view: playlists.some(p => p.id === prefs.view) ? prefs.view : 'all'
+  });
+}
+function resetLibrary() { playlists = []; Object.assign(lib, LIB_DEFAULTS, { queue: [], history: [], played: new Set(), order: [] }); }
+function purgeSong(id) { // dipanggil apabila lagu dipadam
+  playlists.forEach(p => { p.songIds = p.songIds.filter(x => x !== id); });
+  lib.queue = lib.queue.filter(x => x !== id); lib.history = lib.history.filter(x => x !== id); lib.played.delete(id); lib.order = lib.order.filter(x => x !== id);
+  saveLib();
+}
+
+/* ---------- sorted / grouped view ---------- */
+function groupLabel(s) {
+  switch (lib.group) {
+    case 'artist': return s.artist || 'Tanpa artis';
+    case 'letter': return /^[a-z]/i.test(s.title) ? s.title[0].toUpperCase() : '#';
+    case 'format': return (s.fileName.split('.').pop() || '?').toUpperCase();
+    default: return '';
+  }
+}
+function viewSongs(query = '') {
+  const pls = currentPlaylist();
+  const order = new Map((pls ? pls.songIds : lib.order).map((id, i) => [id, i]));
+  const manual = lib.sort === 'manual';
+  const sortKey = manual ? s => order.get(s.id) ?? order.size + s.addedAt / 1e13 : (lib.sort === 'added' && pls ? s => order.get(s.id) : SORTS[lib.sort]);
+  const dir = manual || lib.dir === 'asc' ? 1 : -1;
+  let list = pls ? pls.songIds.map(songById).filter(Boolean) : [...songs];
+  if (query) list = list.filter(s => `${s.title} ${s.artist} ${s.fileName}`.toLowerCase().includes(query));
+  list.sort((a, b) => { const x = sortKey(a), y = sortKey(b); return dir * (typeof x === 'string' ? x.localeCompare(y) : x - y); });
+  return lib.group === 'none' ? list : list.sort((a, b) => groupLabel(a).localeCompare(groupLabel(b))); // sort stabil: susunan dalam kumpulan dikekalkan
+}
+function groupHeader(list, i) {
+  if (lib.group === 'none') return '';
+  const label = groupLabel(list[i]);
+  if (i && groupLabel(list[i - 1]) === label) return '';
+  return `<div class="group-head">${esc(label)} <span>${list.filter(s => groupLabel(s) === label).length} lagu</span></div>`;
+}
+
+/* ---------- playback control ---------- */
+function playTrack(id, force) {
+  if (!songById(id)) return;
+  if (pl.id === id && !force) return playerSelect(id); // klik lagu semasa = main/jeda
+  if (pl.id && pl.id !== id) { lib.history.push(pl.id); lib.history.splice(0, lib.history.length - 50); }
+  lib.played.add(id);
+  if (pl.id === id) { player.currentTime = 0; return playerPlay(); }
+  return playerSelect(id);
+}
+function takeQueued() { while (lib.queue.length) { const id = lib.queue.shift(); if (songById(id)) return id; } return null; }
+function pickNext() {
+  const ids = viewSongs().map(s => s.id);
+  if (!ids.length) return null;
+  if (lib.shuffle) {
+    let pool = ids.filter(id => !lib.played.has(id));
+    if (!pool.length && lib.repeat === 'all') {
+      lib.played = new Set(pl.id ? [pl.id] : []);
+      pool = ids.filter(id => id !== pl.id); if (!pool.length) pool = ids;
+    }
+    return pool.length ? randomOf(pool) : null;
+  }
+  const i = ids.indexOf(pl.id);
+  if (i < ids.length - 1) return ids[i + 1];
+  return lib.repeat === 'all' ? ids[0] : null;
+}
+function nextTrack(manual) {
+  const id = takeQueued() || pickNext();
+  renderLibraryTools();
+  if (id) return playTrack(id, true);
+  if (manual) toast('Ini lagu terakhir dalam senarai.', 'info'); else playerStop();
+}
+function prevTrack() {
+  if (!pl.id) return;
+  if (player.currentTime > 3 || !lib.history.length) { player.currentTime = 0; return; }
+  const id = lib.history.pop();
+  if (songById(id) && id !== pl.id) playerSelect(id); else prevTrack();
+}
+function playAll(shuffle) {
+  const ids = viewSongs().map(s => s.id);
+  if (!ids.length) return toast('Tiada lagu untuk dimainkan.', 'warn');
+  if (shuffle) lib.shuffle = true;
+  lib.played.clear(); saveLib();
+  playTrack(lib.shuffle ? randomOf(ids) : ids[0], true);
+}
+function randomSong() {
+  const ids = viewSongs().map(s => s.id).filter(id => id !== pl.id);
+  if (!ids.length) return toast('Tiada lagu lain untuk dipilih.', 'warn');
+  playTrack(randomOf(ids), true);
+}
+player.addEventListener('ended', () => { // main berterusan, ulang satu lagu
+  if (!pl.id) return;
+  if (lib.repeat === 'one') { player.currentTime = 0; playerPlay(); }
+  else if (lib.auto) nextTrack(false);
+});
+
+/* ---------- queue ---------- */
+function queueAdd(id) {
+  if (!songById(id)) return;
+  lib.queue.push(id); renderLibraryTools(); toast('Ditambah ke queue.', 'success', 2200);
+}
+
+/* ---------- playlist CRUD ---------- */
+function playlistNameError(name, self) {
+  if (!name) return 'Nama playlist tidak boleh kosong.';
+  if (playlists.some(p => p !== self && p.name.toLowerCase() === name.toLowerCase())) return 'Nama playlist ini sudah wujud.';
+  if (!self && playlists.length >= MAX_PLAYLISTS) return `Had ${MAX_PLAYLISTS} playlist dicapai.`;
+  return '';
+}
+function addPlaylist(name, songIds = []) { const p = { id: uid(), name, songIds }; playlists.push(p); return p; }
+function openPlaylistForm(pls) {
+  const m = openModal(`<h3 class="modal-title">${pls ? 'Namakan Semula Playlist' : 'Playlist Baharu'}</h3>
+    <form id="plForm" class="mt-4" novalidate>
+      <p id="plErr" class="form-error is-hidden" role="alert"></p>
+      <label class="field"><span class="fl">Nama playlist</span><input id="plName" class="input" maxlength="40" value="${esc(pls ? pls.name : '')}" required></label>
+      <div class="modal-actions"><button type="button" class="btn" data-close>Batal</button><button class="btn btn-primary" type="submit">Simpan</button></div>
+    </form>`);
+  $('#plForm', m.el).addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('#plName', m.el).value.trim().slice(0, 40), msg = playlistNameError(name, pls);
+    if (msg) { const er = $('#plErr', m.el); er.textContent = msg; er.classList.remove('is-hidden'); return; }
+    if (pls) pls.name = name; else lib.view = addPlaylist(name).id;
+    saveLib(); renderSongList(); m.close(); toast(pls ? 'Playlist dinamakan semula.' : 'Playlist dicipta.', 'success');
+  });
+}
+async function deletePlaylist(pls) {
+  if (!pls) return;
+  const ok = await confirmDialog({ title: 'Padam playlist?', message: `Playlist "${pls.name}" akan dipadam. Lagu di dalamnya kekal dalam Music Library.`, okText: 'Padam', danger: true });
+  if (!ok) return;
+  playlists = playlists.filter(p => p !== pls); lib.view = 'all';
+  saveLib(); renderSongList(); toast('Playlist dipadam.', 'success');
+}
+function removeFromPlaylist(songId) {
+  const pls = currentPlaylist(); if (!pls) return;
+  pls.songIds = pls.songIds.filter(x => x !== songId);
+  saveLib(); renderSongList(); toast('Dibuang daripada playlist.', 'info', 2200);
+}
+function openPlaylistPicker(songId) {
+  const s = songById(songId); if (!s) return;
+  const rowsHtml = () => playlists.map(p => `<label class="row" style="cursor:pointer"><div><b>${esc(p.name)}</b><small>${p.songIds.length} lagu</small></div>
+    <span class="switch"><input type="checkbox" data-pid="${p.id}" ${p.songIds.includes(songId) ? 'checked' : ''} aria-label="${esc(p.name)}"><span></span></span></label>`).join('')
+    || '<p class="muted small">Belum ada playlist. Cipta yang pertama di bawah.</p>';
+  const m = openModal(`<h3 class="modal-title">Tambah ke Playlist</h3><p class="muted mt-2">${esc(s.title)}</p>
+    <div id="plRows" class="mt-3">${rowsHtml()}</div>
+    <form id="plNew" class="flex gap-2 mt-3" novalidate><input id="plNewName" class="input" maxlength="40" placeholder="Playlist baharu…" aria-label="Nama playlist baharu"><button class="btn btn-primary" type="submit"><i data-lucide="plus"></i>Cipta</button></form>
+    <div class="modal-actions"><button class="btn" data-close>Selesai</button></div>`);
+  const rows = $('#plRows', m.el);
+  rows.addEventListener('change', e => {
+    const p = playlists.find(x => x.id === e.target.dataset.pid); if (!p) return;
+    p.songIds = e.target.checked ? [...new Set([...p.songIds, songId])] : p.songIds.filter(x => x !== songId);
+    saveLib(); renderSongList();
+  });
+  $('#plNew', m.el).addEventListener('submit', e => {
+    e.preventDefault();
+    const input = $('#plNewName', m.el), name = input.value.trim().slice(0, 40), msg = playlistNameError(name);
+    if (msg) return toast(msg, 'warn');
+    addPlaylist(name, [songId]); input.value = ''; rows.innerHTML = rowsHtml();
+    saveLib(); renderSongList(); toast(`Ditambah ke "${name}".`, 'success', 2500);
+  });
+}
+
+/* ---------- rendering of tools ---------- */
+function renderLibraryTools() {
+  const pls = currentPlaylist();
+  const tabs = [{ id: 'all', name: `Semua lagu (${songs.length})` }, ...playlists.map(p => ({ id: p.id, name: `${p.name} (${p.songIds.length})` }))];
+  $('#plChips').innerHTML = tabs.map(t => `<button class="pl-chip ${t.id === (pls ? pls.id : 'all') ? 'on' : ''}" data-lib="view" data-id="${t.id}">${esc(t.name)}</button>`).join('')
+    + '<button class="pl-chip" data-lib="pl-new"><i data-lucide="plus"></i>Playlist baharu</button>';
+  $('#plManage').classList.toggle('is-hidden', !pls);
+  $('#libSort').value = lib.sort; $('#libGroup').value = lib.group;
+  const dirBtn = $('#libDir');
+  dirBtn.setAttribute('aria-label', lib.dir === 'asc' ? 'Susunan menaik (tekan untuk tukar)' : 'Susunan menurun (tekan untuk tukar)');
+  setIcon(dirBtn, lib.dir === 'asc' ? 'arrow-up-narrow-wide' : 'arrow-down-wide-narrow');
+  [['#pShuffle', lib.shuffle], ['#pRepeat', lib.repeat !== 'off'], ['#libAuto', lib.auto]].forEach(([sel, on]) => {
+    const b = $(sel); b.classList.toggle('btn-primary', on); b.setAttribute('aria-pressed', String(on));
+  });
+  setIcon($('#pRepeat'), lib.repeat === 'one' ? 'repeat-1' : 'repeat');
+  $('#pRepeat').setAttribute('aria-label', `Ulang: ${{ off: 'mati', all: 'semua lagu', one: 'satu lagu' }[lib.repeat]}`);
+  lib.queue = lib.queue.filter(id => songById(id));
+  $('#queueBox').innerHTML = !lib.queue.length ? '' : `<div class="queue-box">
+    <div class="flex items-center justify-between mb-1"><b>Queue (${lib.queue.length})</b><button class="btn btn-sm" data-lib="queue-clear"><i data-lucide="x"></i>Kosongkan</button></div>`
+    + lib.queue.slice(0, 8).map((id, i) => `<div class="queue-item"><span>${i + 1}. ${esc(songById(id).title)}</span><button class="btn btn-icon btn-sm" data-lib="queue-remove" data-id="${i}" aria-label="Buang daripada queue"><i data-lucide="x"></i></button></div>`).join('')
+    + (lib.queue.length > 8 ? `<div class="muted small">…dan ${lib.queue.length - 8} lagi</div>` : '') + '</div>';
+  icons();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-lib]'); if (!el) return;
+  const id = el.dataset.id, refresh = () => { saveLib(); renderSongList(); };
+  switch (el.dataset.lib) {
+    case 'shuffle': lib.shuffle = !lib.shuffle; lib.played = new Set(pl.id ? [pl.id] : []); refresh(); break;
+    case 'repeat': lib.repeat = { off: 'all', all: 'one', one: 'off' }[lib.repeat]; refresh(); break;
+    case 'auto': lib.auto = !lib.auto; refresh(); break;
+    case 'dir': lib.dir = lib.dir === 'asc' ? 'desc' : 'asc'; refresh(); break;
+    case 'view': lib.view = id; refresh(); break;
+    case 'prev': prevTrack(); break;
+    case 'next': nextTrack(true); break;
+    case 'random': randomSong(); break;
+    case 'play-all': playAll(false); break;
+    case 'shuffle-all': playAll(true); break;
+    case 'pl-new': openPlaylistForm(); break;
+    case 'pl-rename': openPlaylistForm(currentPlaylist()); break;
+    case 'pl-delete': deletePlaylist(currentPlaylist()); break;
+    case 'pl-add': openPlaylistPicker(id); break;
+    case 'pl-remove': removeFromPlaylist(id); break;
+    case 'queue-add': queueAdd(id); break;
+    case 'queue-remove': lib.queue.splice(Number(id), 1); renderLibraryTools(); break;
+    case 'queue-clear': lib.queue = []; renderLibraryTools(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const { id, value } = e.target;
+  if (id === 'libSort' && Object.hasOwn(SORTS, value)) lib.sort = value;
+  else if (id === 'libGroup' && GROUP_FIELDS.includes(value)) lib.group = value;
+  else return;
+  saveLib(); renderSongList();
+});
+
+/* ============================== Drag & drop reorder ============================== */
+// Susunan manual: playlist -> playlist.songIds, semua lagu -> lib.order. Pegangan hanya aktif tanpa carian/kumpulan.
+const searchQuery = () => $('#songSearch').value.trim();
+function dragHandle() {
+  if (lib.group !== 'none' || searchQuery()) return '';
+  return '<button class="drag-handle" aria-label="Seret untuk susun semula (atau guna anak panah atas/bawah)" title="Seret untuk susun semula"><i data-lucide="grip-vertical"></i></button>';
+}
+function reorderSong(id, index) {
+  const before = viewSongs().map(s => s.id), ids = before.filter(x => x !== id);
+  ids.splice(clamp(index, 0, ids.length), 0, id);
+  if (lib.sort === 'manual' && ids.join() === before.join()) return;
+  const pls = currentPlaylist();
+  if (pls) pls.songIds = ids; else lib.order = ids;
+  const switched = lib.sort !== 'manual'; lib.sort = 'manual';
+  saveLib(); renderSongList();
+  if (switched) toast('Beralih ke susunan manual.', 'info', 2200);
+}
+let drag = null;
+const pageCenter = el => { const r = el.getBoundingClientRect(); return r.top + scrollY + r.height / 2; };
+const clearDropMarks = () => $$('.drop-before, .drop-after').forEach(r => r.classList.remove('drop-before', 'drop-after'));
+function endDrag(commit) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  d.row.classList.remove('dragging'); d.row.style.transform = ''; clearDropMarks();
+  if (commit && d.index !== null) reorderSong(d.id, d.index);
+}
+document.addEventListener('pointerdown', e => {
+  const handle = e.target.closest('.drag-handle'), row = handle && handle.closest('.song-row');
+  if (!row || e.button > 0) return;
+  e.preventDefault();
+  try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+  drag = { row, id: row.dataset.song, pid: e.pointerId, startY: e.pageY, center: pageCenter(row), index: null };
+  row.classList.add('dragging');
+});
+document.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  if (e.clientY < 70) scrollBy(0, -14); else if (e.clientY > innerHeight - 70) scrollBy(0, 14);
+  const dy = e.pageY - drag.startY, center = drag.center + dy;
+  drag.row.style.transform = `translateY(${dy}px)`;
+  const others = $$('.song-row', drag.row.parentElement).filter(r => r !== drag.row);
+  drag.index = others.filter(r => pageCenter(r) < center).length;
+  clearDropMarks();
+  if (others[drag.index]) others[drag.index].classList.add('drop-before');
+  else if (others.length) others[others.length - 1].classList.add('drop-after');
+});
+document.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.pid) endDrag(true); });
+document.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.pid) endDrag(false); });
+document.addEventListener('keydown', e => { // akses papan kekunci: fokus pada pegangan, tekan anak panah atas/bawah
+  const handle = e.target.closest && e.target.closest('.drag-handle');
+  if (!handle || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  e.preventDefault();
+  const id = handle.closest('.song-row').dataset.song, i = viewSongs().findIndex(s => s.id === id), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+  if (i < 0 || j < 0 || j >= songs.length) return;
+  reorderSong(id, j);
+  const again = $(`.song-row[data-song="${id}"] .drag-handle`); if (again) again.focus();
+});
+
+/* ============================== i18n: Bahasa Melayu / English ============================== */
+// Paparan asal ditulis dalam BM. Mod English menterjemah teks DOM (dan aria-label/placeholder/title) secara langsung
+// menggunakan kamus + corak di bawah; teks pengguna (nama penggera, tajuk lagu) tidak diterjemah.
+const LANGS = ['ms', 'en'];
+const ATTRS = ['aria-label', 'placeholder', 'title'];
+const dateLocale = () => settings.lang === 'en' ? 'en-GB' : 'ms-MY';
+const DICT = `
+Navigasi utama = Main navigation
+Navigasi mudah alih = Mobile navigation
+Penggera pintar anda = Your smart alarm
+Penggera = Alarm
+Tetapan = Settings
+Muzik = Music
+Mod Cerah = Light Mode
+Mod Gelap = Dark Mode
+Tukar tema = Toggle theme
+Waktu Sekarang = Current Time
+Tukar format 12 atau 24 jam = Switch between 12-hour and 24-hour format
+24 jam = 24-hour
+12 jam = 12-hour
+Jam digital = Digital clock
+Penggera Seterusnya = Next Alarm
+Tiada penggera aktif = No active alarms
+Tambah penggera untuk bermula. = Add an alarm to get started.
+Aktifkan satu penggera untuk memulakan. = Enable an alarm to begin.
+Visualizer Audio = Audio Visualizer
+Visualizer audio = Audio visualizer
+Status Kesediaan = Readiness Status
+Penting: = Important:
+penggera web paling boleh diharapkan apabila halaman ini = web alarms are most reliable when this page is
+kekal terbuka = kept open
+dan pelayar membenarkan JavaScript serta audio berjalan. Penggera tidak dijamin berbunyi jika pelayar ditutup, tab digantung, telefon dikunci atau sistem operasi menyekat aktiviti latar belakang. Jangan bergantung kepadanya untuk perkara kritikal. = and the browser allows JavaScript and audio to run. Alarms are not guaranteed to ring if the browser is closed, the tab is suspended, the phone is locked or the operating system blocks background activity. Do not rely on it for critical matters.
+Penggera Akan Datang = Upcoming Alarms
+Tiada penggera akan datang. = No upcoming alarms.
+Belum ada penggera. Tekan = No alarms yet. Press
+untuk mencipta yang pertama. = to create your first one.
+Belum ada lagu. Tekan = No songs yet. Press
+untuk memuat naik MP3, WAV, OGG atau M4A. = to upload MP3, WAV, OGG or M4A.
+Penyimpanan lagu (IndexedDB) tidak tersedia pada pelayar ini. Mod peribadi/incognito sesetengah pelayar menyekatnya. Penggera masih boleh guna nada lalai. = Song storage (IndexedDB) is unavailable in this browser. Private/incognito mode in some browsers blocks it. Alarms can still use the default tone.
+Tiada lagu dipilih = No song selected
+Pilih lagu dari senarai untuk pratonton. = Pick a song from the list to preview.
+Visualizer pemain = Player visualizer
+Bar seek = Seek bar
+Main atau jeda = Play or pause
+Henti = Stop
+Senyap atau nyahsenyap = Mute or unmute
+Volume pemain = Player volume
+Cari lagu = Search songs
+Cari tajuk, artis atau nama fail… = Search title, artist or file name…
+Lalai = Default
+Tajuk = Title
+Artis (pilihan) = Artist (optional)
+Batal = Cancel
+Simpan = Save
+Ya = Yes
+Tajuk tidak boleh kosong. = Title cannot be empty.
+Metadata dikemas kini. = Metadata updated.
+Gagal menyimpan metadata. = Failed to save metadata.
+Padam lagu? = Delete song?
+Padam = Delete
+Lagu dipadam. = Song deleted.
+Gagal memadam lagu. = Failed to delete song.
+Jadikan Muzik Penggera = Set as Alarm Music
+Gunakan untuk = Use for
+Lalai untuk penggera baharu = Default for new alarms
+Belum ada penggera. Lagu ini akan menjadi pilihan lalai untuk penggera baharu. = No alarms yet. This song will become the default choice for new alarms.
+Dijadikan muzik lalai untuk penggera baharu. = Set as the default music for new alarms.
+Fail muzik tidak dapat dibaca. Cuba muat naik semula. = The music file can't be read. Try uploading it again.
+Ralat memainkan fail muzik. Format mungkin tidak disokong. = Error playing the music file. The format may not be supported.
+Tidak dapat memainkan audio. Cuba tekan butang main sekali lagi. = Can't play audio. Try pressing play again.
+Pemain dijeda semasa penggera berbunyi. = The player is paused while an alarm is ringing.
+Penyimpanan lagu tidak tersedia pada pelayar ini. = Song storage is not available in this browser.
+Storan pelayar penuh. Padam beberapa lagu dahulu. = Browser storage is full. Delete some songs first.
+Gagal menyimpan data pada pelayar (storan penuh atau disekat). = Failed to save data in the browser (storage full or blocked).
+Mod ujian = Test mode
+File muzik tiada — nada lalai digunakan = Music file missing — default tone is used
+Music File Missing — nada lalai digunakan. = Music File Missing — default tone is used.
+File muzik tiada = Music file missing
+File muzik tiada (nada lalai) = Music file missing (default tone)
+Nada lalai = Default tone
+Nada lalai (beep) = Default tone (beep)
+Gagal memainkan lagu. Menggunakan nada lalai. = Failed to play the song. Using the default tone.
+Fail muzik rosak. Menggunakan nada lalai. = The music file is corrupted. Using the default tone.
+Penggera dihentikan. = Alarm stopped.
+Ujian dihentikan. = Test stopped.
+Had snooze telah dicapai. Tekan STOP. = Snooze limit reached. Press STOP.
+HAD SNOOZE DICAPAI = SNOOZE LIMIT REACHED
+Ini hanyalah ujian penggera. = This is only an alarm test.
+Audio disekat oleh pelayar. = Audio blocked by the browser.
+Pelayar tidak membenarkan audio dimainkan secara automatik. Tekan butang di bawah untuk memulakan bunyi. = The browser doesn't allow audio to play automatically. Press the button below to start the sound.
+Mulakan Audio = Start Audio
+Benarkan Audio = Allow Audio
+Volume penggera = Alarm volume
+Pelayar ini tidak menyokong notifikasi. = This browser doesn't support notifications.
+Kebenaran notifikasi tidak diberikan. Anda boleh mengubahnya melalui tetapan tapak pelayar. = Notification permission was not granted. You can change it in your browser's site settings.
+Notifikasi diaktifkan. Ingat: notifikasi tidak menjamin audio berbunyi. = Notifications enabled. Remember: notifications don't guarantee that audio will play.
+Pelayar ini tidak menyokong Wake Lock. = This browser doesn't support Wake Lock.
+Audio dibenarkan. = Audio allowed.
+Pelayar masih menyekat audio. Cuba tekan sekali lagi. = The browser is still blocking audio. Try pressing again.
+Tidak aktif = Inactive
+Waktu telah berlalu = Time has passed
+Aktif = Active
+Penggera aktif = Alarm active
+Penggera Baharu = New Alarm
+Edit Penggera = Edit Alarm
+Nama penggera = Alarm name
+cth. Bangun pagi = e.g. Wake up
+Waktu = Time
+Ulang = Repeat
+Sekali sahaja = Once only
+Sekali = Once
+Setiap hari = Every day
+Isnin–Jumaat = Mon–Fri
+Hujung minggu = Weekends
+Ahad = Sunday
+Isnin = Monday
+Selasa = Tuesday
+Rabu = Wednesday
+Khamis = Thursday
+Jumaat = Friday
+Sabtu = Saturday
+Tarikh (untuk penggera sekali sahaja) = Date (for one-time alarms)
+Lagu penggera = Alarm song
+Tempoh snooze = Snooze duration
+Nota (pilihan) = Note (optional)
+Nota ringkas… = Short note…
+Penggera akan berbunyi pada waktunya = The alarm will ring at its time
+Uji bunyi = Test sound
+Sila pilih waktu penggera yang sah. = Please choose a valid alarm time.
+Tarikh tidak sah. = Invalid date.
+Waktu penggera sekali sahaja ini sudah berlalu. Pilih tarikh atau waktu akan datang, atau nyahaktifkan penggera. = This one-time alarm time has already passed. Pick a future date or time, or deactivate the alarm.
+Tempoh snooze tidak sah. = Invalid snooze duration.
+Penggera dikemas kini. = Alarm updated.
+Penggera ditambah. = Alarm added.
+Padam penggera? = Delete alarm?
+Penggera dipadam. = Alarm deleted.
+Tiada Penggera Aktif = No Active Alarms
+Tambah atau aktifkan penggera untuk bermula. = Add or enable an alarm to get started.
+Pelayar memerlukan satu interaksi pada halaman ini sebelum audio dibenarkan. = The browser needs one interaction on this page before audio is allowed.
+Penggera paling boleh diharapkan semasa halaman ini terbuka. Tab latar belakang atau telefon berkunci mungkin menyekat bunyi. = Alarms are most reliable while this page is open. Background tabs or a locked phone may block the sound.
+Paparan = Display
+Format masa = Time format
+Jam 12 atau 24 jam = 12-hour or 24-hour clock
+Tema = Theme
+Gelap (utama) atau cerah = Dark (default) or light
+Gelap = Dark
+Cerah = Light
+Bahasa = Language
+Bahasa paparan aplikasi = App display language
+Volume lalai = Default volume
+Untuk penggera baharu = For new alarms
+Tempoh snooze lalai = Default snooze duration
+Snooze lalai = Default snooze
+Had snooze = Snooze limit
+Bilangan snooze maksimum setiap kejadian = Maximum snoozes per alarm event
+Tanpa had = No limit
+Berulang lalai = Default repeat
+Tetapan berulang lalai = Default repeat setting
+Notifikasi & Peranti = Notifications & Devices
+Notifikasi pelayar = Browser notifications
+Dipaparkan apabila penggera berbunyi (perlu kebenaran) = Shown when an alarm rings (permission required)
+Kekalkan skrin hidup = Keep screen awake
+Mengurangkan risiko tab digantung (jika disokong) = Reduces the risk of the tab being suspended (if supported)
+Uji penggera = Test alarm
+Mainkan skrin penggera sekarang = Play the alarm screen now
+Reset tetapan = Reset settings
+Kembalikan tetapan asal (penggera dikekalkan) = Restore default settings (alarms are kept)
+Data & Privasi = Data & Privacy
+Penggera dan tetapan disimpan dalam = Alarms and settings are stored in
+, manakala fail lagu dalam = , while song files are in
+, pada pelayar ini sahaja. Data dan lagu = , in this browser only. Data and songs
+tidak diselaraskan secara automatik = are not synced automatically
+antara peranti atau pelayar yang berlainan. Export mengandungi penggera & tetapan sahaja (bukan fail lagu). = between different devices or browsers. Export contains alarms & settings only (not song files).
+Volume dalam aplikasi hanya mengawal tahap audio pelayar. Volume sebenar masih bergantung pada tetapan peranti anda, dan sesetengah pelayar mudah alih (contohnya iOS) mengabaikan kawalan volume laman web. = In-app volume only controls the browser's audio level. The real volume still depends on your device settings, and some mobile browsers (e.g. iOS) ignore web page volume controls.
+Fail JSON dieksport (penggera & tetapan sahaja; fail lagu tidak termasuk). = JSON file exported (alarms & settings only; song files are not included).
+Fail terlalu besar untuk diimport. = The file is too large to import.
+Fail bukan JSON yang sah. = The file is not valid JSON.
+Fail ini bukan eksport Personal Smart Alarm yang sah. = This file is not a valid Personal Smart Alarm export.
+Import data? = Import data?
+Reset tetapan? = Reset settings?
+Semua tetapan akan dikembalikan kepada nilai asal. Penggera dan lagu anda tidak akan dipadam. = All settings will be restored to their defaults. Your alarms and songs will not be deleted.
+Tetapan telah di-reset. = Settings have been reset.
+Padam SEMUA data? = Delete ALL data?
+Padam Semua = Delete All
+Semua penggera, tetapan dan fail lagu pada pelayar ini akan dipadam secara kekal. Tindakan ini tidak boleh dibatalkan. = All alarms, settings and song files in this browser will be permanently deleted. This action cannot be undone.
+Sebahagian fail lagu gagal dipadam. = Some song files could not be deleted.
+Semua data telah dipadam. = All data has been deleted.
+Ralat semasa memulakan aplikasi. = An error occurred while starting the app.
+Rawak (shuffle) = Shuffle
+Lagu sebelumnya = Previous song
+Lagu seterusnya = Next song
+Ulang = Repeat
+Namakan semula = Rename
+Padam playlist = Delete playlist
+Main semua = Play all
+Lagu rawak = Random song
+Main berterusan = Continuous play
+Susun mengikut = Sort by
+Susun: Tarikh ditambah = Sort: Date added
+Susun: Tajuk = Sort: Title
+Susun: Artis = Sort: Artist
+Susun: Tempoh = Sort: Duration
+Susun: Saiz = Sort: Size
+Susun: Manual (seret) = Sort: Manual (drag)
+Kumpulkan mengikut = Group by
+Tanpa kumpulan = No grouping
+Kumpul: Artis = Group: Artist
+Kumpul: Huruf pertama = Group: First letter
+Kumpul: Format = Group: Format
+Tanpa artis = No artist
+Susunan menaik (tekan untuk tukar) = Ascending order (press to toggle)
+Susunan menurun (tekan untuk tukar) = Descending order (press to toggle)
+Playlist baharu = New playlist
+Playlist Baharu = New Playlist
+Namakan Semula Playlist = Rename Playlist
+Nama playlist = Playlist name
+Nama playlist baharu = New playlist name
+Playlist baharu… = New playlist…
+Kosongkan = Clear
+Buang daripada queue = Remove from queue
+Tambah ke Playlist = Add to Playlist
+Belum ada playlist. Cipta yang pertama di bawah. = No playlists yet. Create your first one below.
+Cipta = Create
+Selesai = Done
+Nama playlist tidak boleh kosong. = Playlist name cannot be empty.
+Nama playlist ini sudah wujud. = This playlist name already exists.
+Playlist dinamakan semula. = Playlist renamed.
+Playlist dicipta. = Playlist created.
+Padam playlist? = Delete playlist?
+Playlist dipadam. = Playlist deleted.
+Dibuang daripada playlist. = Removed from playlist.
+Ditambah ke queue. = Added to queue.
+Tiada lagu untuk dimainkan. = No songs to play.
+Tiada lagu lain untuk dipilih. = No other songs to pick.
+Ini lagu terakhir dalam senarai. = This is the last song in the list.
+Playlist ini masih kosong. Tekan ikon folder pada lagu untuk menambah. = This playlist is still empty. Press the folder icon on a song to add it.
+Tiada lagu sepadan dengan carian anda. = No songs match your search.
+Seret untuk susun semula (atau guna anak panah atas/bawah) = Drag to reorder (or use the up/down arrow keys)
+Seret untuk susun semula = Drag to reorder
+Beralih ke susunan manual. = Switched to manual order.
+Pasang Aplikasi = Install App
+Pasang ke Desktop = Install to Desktop
+Pasang sebagai aplikasi dengan tetingkap sendiri (perlu https:// atau localhost) = Install as an app with its own window (requires https:// or localhost)
+Aplikasi dipasang. = App installed.
+Buka melalui https:// (cth. Netlify) atau http://localhost untuk memasang aplikasi. = Open via https:// (e.g. Netlify) or http://localhost to install the app.
+Klik ikon pasang pada bar alamat pelayar, atau menu ⋮ → Install / Pasang aplikasi. = Click the install icon in the browser's address bar, or menu ⋮ → Install app.
+`;
+const EN = new Map(DICT.trim().split('\n').map(l => l.split(' = ')));
+const RULES = [
+  [/^(\d+) lagu ditambah ke Music Library\.$/, '$1 song(s) added to Music Library.'],
+  [/^"(.+)": format tidak disokong\. Gunakan MP3, WAV, OGG atau M4A\/AAC\.$/, '"$1": unsupported format. Use MP3, WAV, OGG or M4A/AAC.'],
+  [/^"(.+)" kosong\.$/, '"$1" is empty.'],
+  [/^"(.+)" melebihi had (.+)\.$/, '"$1" exceeds the $2 limit.'],
+  [/^"(.+)": fail tidak dapat dibaca atau format tidak disokong oleh pelayar ini\.$/, '"$1": the file can\'t be read or its format isn\'t supported by this browser.'],
+  [/^Gagal menyimpan "(.+)"\.$/, 'Failed to save "$1".'],
+  [/^(\d+) lagu · (.+) disimpan pada pelayar ini$/, '$1 songs · $2 stored in this browser'],
+  [/^(\d+) lagu$/, '$1 songs'],
+  [/^(\d+) penggera$/, '$1 alarms'],
+  [/^Fail: (.+)$/, 'File: $1'],
+  [/^Muzik "(.+)" ditetapkan\.$/, 'Music for "$1" set.'],
+  [/^"(.+)" akan dipadam daripada pelayar ini\.(?: (\d+) penggera menggunakan lagu ini dan akan memaparkan "Music File Missing" \(nada lalai digunakan\)\.)?$/,
+    (m, t, n) => `"${t}" will be deleted from this browser.` + (n ? ` ${n} alarm(s) use this song and will show "Music File Missing" (the default tone is used).` : '')],
+  [/^Penggera terlepas \(halaman tidak aktif\): (.+)$/, 'Missed alarm(s) (page was inactive): $1'],
+  [/^Snooze ke-(\d+)$/, 'Snooze #$1'],
+  [/^SNOOZE (\d+) MINIT(?: · baki (\d+))?$/, (m, n, left) => `SNOOZE ${n} MIN` + (left ? ` · ${left} left` : '')],
+  [/^Snooze (\d+) minit — berbunyi semula pada (.+)\.$/, 'Snoozed $1 min — ringing again at $2.'],
+  [/^"(.+)" diaktifkan\.$/, '"$1" enabled.'],
+  [/^"(.+)" dinyahaktifkan\.$/, '"$1" disabled.'],
+  [/^Penggera "(.+)" \((.+)\) akan dipadam secara kekal\.$/, 'Alarm "$1" ($2) will be permanently deleted.'],
+  [/^(\d+) minit$/, (m, n) => n === '1' ? '1 minute' : `${n} minutes`],
+  [/^(\d+) kali$/, '$1 times'],
+  [/^Seterusnya: (.+)$/, 'Next: $1'],
+  [/^(\d+) penggera aktif sedang dipantau\.$/, '$1 active alarm(s) are being monitored.'],
+  [/^"(.+?)"(?: dan (\d+) lagi)? menggunakan lagu yang tiada\. Nada lalai akan dimainkan\.$/,
+    (m, t, n) => `"${t}"` + (n ? ` and ${n} more` : '') + ' use a missing song. The default tone will play.'],
+  [/^(\d+) daripada (\d+) penggera aktif$/, '$1 of $2 alarms active'],
+  [/^(\d+) hari (.+)$/, '$1 d $2'],
+  [/^(\d+) penggera semasa akan digantikan dengan (\d+) penggera daripada fail(?: \((\d+) rekod tidak sah diabaikan\))?\. Tetapan juga dikemas kini\. Fail lagu tidak diimport — penggera yang merujuk lagu yang tiada akan guna nada lalai\.$/,
+    (m, a, b, bad) => `${a} current alarm(s) will be replaced with ${b} alarm(s) from the file` + (bad ? ` (${bad} invalid record(s) ignored)` : '') + '. Settings are updated too. Song files are not imported — alarms that refer to missing songs will use the default tone.'],
+  [/^(\d+) penggera diimport\.$/, '$1 alarm(s) imported.'],
+  [/^Waktu penggera (.+)$/, 'Alarm time $1'],
+  [/^Semua lagu \((\d+)\)$/, 'All songs ($1)'],
+  [/^…dan (\d+) lagi$/, '…and $1 more'],
+  [/^Had (\d+) playlist dicapai\.$/, 'Limit of $1 playlists reached.'],
+  [/^Playlist "(.+)" akan dipadam\. Lagu di dalamnya kekal dalam Music Library\.$/, 'Playlist "$1" will be deleted. Its songs stay in Music Library.'],
+  [/^Ditambah ke "(.+)"\.$/, 'Added to "$1".'],
+  [/^(?:(?:Ahd|Isn|Sel|Rab|Kha|Jum|Sab)(?:, )?)+$/, m => m.replace(/Ahd|Isn|Sel|Rab|Kha|Jum|Sab/g, d => ({ Ahd: 'Sun', Isn: 'Mon', Sel: 'Tue', Rab: 'Wed', Kha: 'Thu', Jum: 'Fri', Sab: 'Sat' })[d])]
+];
+const ATTR_RULES = [ // hanya untuk atribut, supaya tajuk lagu seperti "Main Api" tidak tersalah terjemah
+  [/^Jeda (.+)$/, 'Pause $1'], [/^Main (.+)$/, 'Play $1'], [/^Padam (.+)$/, 'Delete $1'],
+  [/^Aktif atau tidak aktif: (.+)$/, 'On/off: $1'], [/^Tambah ke queue: (.+)$/, 'Add to queue: $1'],
+  [/^Tambah ke playlist: (.+)$/, 'Add to playlist: $1'], [/^Buang daripada playlist: (.+)$/, 'Remove from playlist: $1'],
+  [/^Ulang: (.+)$/, (m, v) => 'Repeat: ' + ({ mati: 'off', 'semua lagu': 'all songs', 'satu lagu': 'one song' }[v] || v)]
+];
+function translate(s, isAttr) {
+  if (!/[a-z]/i.test(s)) return s;
+  if (EN.has(s)) return EN.get(s);
+  for (const [re, to] of (isAttr ? ATTR_RULES : []).concat(RULES)) if (re.test(s)) return s.replace(re, to);
+  if (s.includes(' · ')) {
+    const parts = s.split(' · '), out = parts.map(p => translate(p, isAttr));
+    return out.some((o, i) => o !== parts[i]) ? out.join(' · ') : s;
+  }
+  const icon = s.match(/^([♪⚠] )(.+)$/);
+  if (icon) { const r = translate(icon[2], isAttr); return r === icon[2] ? s : icon[1] + r; }
+  return s;
+}
+const tr = s => settings.lang === 'en' ? translate(s) : s;
+
+const i18n = { text: new WeakMap(), attr: new WeakMap() }; // simpan teks BM asal supaya boleh dipulihkan
+function syncText(node) {
+  const rec = i18n.text.get(node);
+  if (rec && node.nodeValue === rec.out) { if (settings.lang !== 'en') { node.nodeValue = rec.orig; i18n.text.delete(node); } return; }
+  i18n.text.delete(node);
+  if (settings.lang !== 'en') return;
+  const cur = node.nodeValue, core = cur.trim(), out = core && translate(core);
+  if (!out || out === core) return;
+  const val = cur.replace(core, () => out);
+  i18n.text.set(node, { orig: cur, out: val }); node.nodeValue = val;
+}
+function syncAttrs(el) {
+  const recs = i18n.attr.get(el) || {};
+  for (const a of ATTRS) {
+    if (!el.hasAttribute(a)) continue;
+    const cur = el.getAttribute(a), rec = recs[a];
+    if (rec && cur === rec.out) { if (settings.lang !== 'en') { el.setAttribute(a, rec.orig); delete recs[a]; } continue; }
+    delete recs[a];
+    if (settings.lang !== 'en') continue;
+    const out = translate(cur, true);
+    if (out !== cur) { recs[a] = { orig: cur, out }; el.setAttribute(a, out); }
+  }
+  i18n.attr.set(el, recs);
+}
+function syncTree(root) {
+  if (root.nodeType === 3) { if (root.parentNode && root.parentNode.nodeName !== 'TEXTAREA') syncText(root); return; }
+  if (root.nodeType !== 1) return;
+  syncAttrs(root);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.nodeType === 1) syncAttrs(n);
+    else if (!['TEXTAREA', 'SCRIPT', 'STYLE'].includes(n.parentNode.nodeName)) syncText(n);
+  }
+}
+function applyLanguage() {
+  document.documentElement.lang = settings.lang;
+  $$('[data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === settings.lang));
+  syncTree(document.body);
+}
+new MutationObserver(muts => { // terjemah kandungan dinamik (toast, modal, senarai) sebaik sahaja dipaparkan
+  if (settings.lang !== 'en') return;
+  for (const m of muts) {
+    if (m.type === 'childList') m.addedNodes.forEach(syncTree);
+    else if (m.type === 'characterData') syncText(m.target);
+    else syncAttrs(m.target);
+  }
+}).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-lang]');
+  if (!b || !LANGS.includes(b.dataset.lang) || b.dataset.lang === settings.lang) return;
+  settings.lang = b.dataset.lang; saveSettings(); renderAll(); applyLanguage();
+});
+
+/* ============================== PWA: pasang sebagai aplikasi ============================== */
+// Manifest dan ikon dijana oleh kod (tanpa fail tambahan). Pemasangan memerlukan https:// atau http://localhost.
+const pwa = { prompt: null };
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function pwaIcon(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'), u = size / 100, bg = g.createLinearGradient(0, 0, size, size);
+  bg.addColorStop(0, '#2563eb'); bg.addColorStop(.55, '#06b6d4'); bg.addColorStop(1, '#8b5cf6');
+  g.fillStyle = bg; g.fillRect(0, 0, size, size); // penuh ke tepi, kandungan dalam zon selamat maskable
+  g.strokeStyle = g.fillStyle = '#fff'; g.lineWidth = 6 * u; g.lineCap = 'round';
+  g.beginPath(); g.arc(50 * u, 54 * u, 22 * u, 0, 6.2832); g.stroke();
+  g.beginPath(); g.moveTo(50 * u, 54 * u); g.lineTo(50 * u, 41 * u); g.moveTo(50 * u, 54 * u); g.lineTo(60 * u, 60 * u); g.stroke();
+  [[30, 30], [70, 30]].forEach(([x, y]) => { g.beginPath(); g.arc(x * u, y * u, 8 * u, 0, 6.2832); g.fill(); });
+  return c.toDataURL('image/png');
+}
+function setupPwa() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  const manifest = {
+    name: 'Personal Smart Alarm', short_name: 'Smart Alarm', description: 'Penggera pintar dengan muzik sendiri.',
+    start_url: location.origin + location.pathname, scope: base, display: 'standalone',
+    background_color: '#050816', theme_color: '#050816', lang: settings.lang,
+    icons: [192, 512].map(s => ({ src: pwaIcon(s), sizes: `${s}x${s}`, type: 'image/png', purpose: 'any maskable' }))
+  };
+  const link = document.createElement('link'); link.rel = 'manifest';
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+  document.head.appendChild(link);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {}); // pilihan: sw.js tiada = tiada cache luar talian
+}
+const refreshInstallUi = () => $$('[data-pwa-ui]').forEach(el => el.classList.toggle('is-hidden', isStandalone()));
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwa.prompt = e; });
+window.addEventListener('appinstalled', () => { pwa.prompt = null; refreshInstallUi(); toast('Aplikasi dipasang.', 'success'); });
+document.addEventListener('click', async e => {
+  if (!e.target.closest('[data-pwa="install"]')) return;
+  if (!pwa.prompt) return toast(/^https?:$/.test(location.protocol)
+    ? 'Klik ikon pasang pada bar alamat pelayar, atau menu ⋮ → Install / Pasang aplikasi.'
+    : 'Buka melalui https:// (cth. Netlify) atau http://localhost untuk memasang aplikasi.', 'info', 9000);
+  const p = pwa.prompt; pwa.prompt = null;
+  p.prompt(); await p.userChoice.catch(() => {}); refreshInstallUi();
+});
+
+/* ============================== Events ============================== */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.tagName === 'INPUT') return;
+  const id = el.dataset.id;
+  switch (el.dataset.act) {
+    case 'goto': showView(el.dataset.view); break;
+    case 'add-alarm': openAlarmModal(); break;
+    case 'test': testAlarm(); break;
+    case 'toggle-theme': settings.theme = settings.theme === 'dark' ? 'light' : 'dark'; applyTheme(); afterSettingsChange(); break;
+    case 'toggle-format': settings.format = settings.format === '24' ? '12' : '24'; afterSettingsChange(); break;
+    case 'unlock': unlockAudio().then(ok => toast(ok ? 'Audio dibenarkan.' : 'Pelayar masih menyekat audio. Cuba tekan sekali lagi.', ok ? 'success' : 'warn')); break;
+    case 'alarm-edit': { const a = alarmById(id); if (a) openAlarmModal(a); break; }
+    case 'alarm-del': deleteAlarm(id); break;
+    case 'upload': { if (!DB.ok) return toast('Penyimpanan lagu tidak tersedia pada pelayar ini.', 'error'); $('#fileInput').click(); break; }
+    case 'song-play': playTrack(id); break;
+    case 'song-edit': openEditSong(id); break;
+    case 'song-del': deleteSong(id); break;
+    case 'song-alarm': openSetAlarmMusic(id); break;
+    case 'p-toggle': if (pl.id) { player.paused ? playerPlay() : player.pause(); } break;
+    case 'p-stop': playerStop(); break;
+    case 'p-mute': settings.playerMuted = !settings.playerMuted; if (!settings.playerMuted && settings.playerVolume === 0) settings.playerVolume = 50; applyPlayerVolume(); saveSettings(); renderPlayerUI(); break;
+    case 'export': exportData(); break;
+    case 'import': $('#importInput').click(); break;
+    case 'reset-settings': resetSettings(); break;
+    case 'clear-all': clearAllData(); break;
+    case 'ring-stop': ringStop(); break;
+    case 'ring-snooze': ringSnooze(); break;
+    case 'ring-unblock': unlockAudio().then(() => playRingSound()); break;
+    case 'ring-mute': ring.muted = !ring.muted; if (!ring.muted && ring.vol === 0) ring.vol = 50; applyRingVolume(); updateRingText(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.matches('[data-act="alarm-toggle"]')) toggleAlarm(t.dataset.id, t.checked);
+});
+$('#fileInput').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+$('#importInput').addEventListener('change', e => { importData(e.target.files[0]); e.target.value = ''; });
+$('#songSearch').addEventListener('input', renderSongList);
+$('#pSeek').addEventListener('input', e => { pl.seeking = true; $('#pCur').textContent = fmtDur(Number(e.target.value)); });
+$('#pSeek').addEventListener('change', e => { try { player.currentTime = Number(e.target.value); } catch (er) {} pl.seeking = false; });
+$('#pVol').addEventListener('input', e => { settings.playerVolume = num(e.target.value, 0, 100, 80); if (settings.playerVolume > 0) settings.playerMuted = false; applyPlayerVolume(); saveSettings(); renderPlayerUI(); });
+$('#ringVol').addEventListener('input', e => { ring.vol = num(e.target.value, 0, 100, 80); ring.muted = false; applyRingVolume(); updateRingText(); });
+$('#view-settings').addEventListener('click', e => {
+  const b = e.target.closest('.seg button'); if (!b) return;
+  const key = b.parentElement.dataset.seg; settings[key] = b.dataset.val;
+  if (key === 'theme') applyTheme();
+  afterSettingsChange();
+});
+$('#setVol').addEventListener('input', e => { settings.volume = num(e.target.value, 0, 100, 80); $('#setVolVal').textContent = settings.volume + '%'; saveSettings(); });
+$('#setSnooze').addEventListener('change', e => { settings.snooze = Number(e.target.value); afterSettingsChange(); });
+$('#setMaxSnooze').addEventListener('change', e => { settings.maxSnooze = Number(e.target.value); afterSettingsChange(); });
+$('#setRepeat').addEventListener('change', e => { settings.repeatDefault = e.target.value; afterSettingsChange(); });
+$('#setNotify').addEventListener('change', async e => { await setNotify(e.target.checked); renderSettings(); });
+$('#setWake').addEventListener('change', async e => {
+  if (e.target.checked && !('wakeLock' in navigator)) { toast('Pelayar ini tidak menyokong Wake Lock.', 'warn'); e.target.checked = false; return; }
+  settings.keepAwake = e.target.checked; saveSettings(); await syncWake();
+});
+const GESTURES = ['pointerdown', 'touchend', 'keydown', 'click'];
+const firstGesture = async () => { await unlockAudio(); if (audioUnlocked) GESTURES.forEach(ev => document.removeEventListener(ev, firstGesture, true)); };
+GESTURES.forEach(ev => document.addEventListener(ev, firstGesture, true));
+document.addEventListener('visibilitychange', () => { tick(true); syncWake(); renderStatus(); if (!document.hidden) bg.dirty = true; });
+window.addEventListener('focus', () => tick(true));
+window.addEventListener('pageshow', () => tick(true));
+window.addEventListener('resize', () => { bgResize(); });
+
+/* ============================== Scheduler ============================== */
+let lastMinute = -1, lastTickSec = -1;
+function tick(force) {
+  const now = new Date();
+  updateClocks(now, force);
+  const sec = now.getSeconds();
+  if (force || sec !== lastTickSec) {
+    lastTickSec = sec;
+    checkAlarms(now); updateNextCard(now); monitorRing();
+    if (now.getMinutes() !== lastMinute) { lastMinute = now.getMinutes(); updateAlarmNextTexts(); if (currentView === 'dashboard') renderUpcoming(); }
+  }
+}
+
+/* ============================== Boot ============================== */
+async function boot() {
+  settings = sanitizeSettings(LS.get(KEYS.settings, {}));
+  applyTheme();
+  applyLanguage();
+  const rawAlarms = LS.get(KEYS.alarms, []);
+  alarms = (Array.isArray(rawAlarms) ? rawAlarms : []).map(sanitizeAlarm).filter(Boolean);
+  const f = LS.get(KEYS.fired, {}); fired = {};
+  if (f && typeof f === 'object') Object.keys(f).forEach(k => { if (Number.isFinite(f[k]) && Date.now() - f[k] < 3 * 86400000) fired[k] = f[k]; });
+  const sn = LS.get(KEYS.snoozes, []);
+  snoozes = (Array.isArray(sn) ? sn : []).filter(s => s && typeof s.key === 'string' && typeof s.alarmId === 'string' && Number.isFinite(s.at) && alarmById(s.alarmId)).map(s => ({ key: s.key, alarmId: s.alarmId, at: s.at, count: num(s.count, 1, 99, 1) }));
+  try { await DB.open(); songs = (await DB.allMeta()).filter(s => s && typeof s.id === 'string'); } catch (e) { DB.ok = false; }
+  loadLibrary();
+  applyPlayerVolume();
+  bgResize();
+  renderAll();
+  requestAnimationFrame(frame);
+  const r = LS.get(KEYS.ringing, null);
+  if (r && typeof r === 'object' && Date.now() - r.startedAt < 10 * 60000) { const a = alarmById(r.alarmId); if (a) ringStart(a, String(r.key), num(r.count, 0, 99, 0), false); else LS.remove(KEYS.ringing); }
+  else LS.remove(KEYS.ringing);
+  tick(true);
+  setInterval(tick, 250);
+  setupPwa();
+  refreshInstallUi();
+  syncWake();
+}
+boot().catch(err => { console.error(err); toast('Ralat semasa memulakan aplikasi.', 'error'); });
+})();
+</script>
+</body>
+</html>
