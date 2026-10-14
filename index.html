@@ -6,18 +6,10 @@
 <meta name="theme-color" content="#050816">
 <meta name="description" content="Personal Smart Alarm — penggera pintar dengan muzik sendiri, berjalan sepenuhnya dalam pelayar anda.">
 <title>Personal Smart Alarm</title>
-<!-- KOD META UNTUK WHATSAPP / FACEBOOK -->
-    <meta property="og:title" content="Personal Smart Alarm Music Player" />
-    <meta property="og:description" content="Personal Smart Alarm Music" />
-    <meta property="og:image" content="https://smart-alarm-music.netlify.app/icons/icon-192.png" />
-    <meta property="og:url" content="https://english-learning-portal.netlify.app" />
-    <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%8F%B0%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
-<!-- Pautan ke fail manifest PWA -->
-  <link rel="manifest" href="manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
@@ -2021,7 +2013,44 @@ document.addEventListener('click', e => {
 
 /* ============================== PWA: pasang sebagai aplikasi ============================== */
 // Manifest dan ikon dijana oleh kod (tanpa fail tambahan). Pemasangan memerlukan https:// atau http://localhost.
-
+const pwa = { prompt: null };
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function pwaIcon(size) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'), u = size / 100, bg = g.createLinearGradient(0, 0, size, size);
+  bg.addColorStop(0, '#2563eb'); bg.addColorStop(.55, '#06b6d4'); bg.addColorStop(1, '#8b5cf6');
+  g.fillStyle = bg; g.fillRect(0, 0, size, size); // penuh ke tepi, kandungan dalam zon selamat maskable
+  g.strokeStyle = g.fillStyle = '#fff'; g.lineWidth = 6 * u; g.lineCap = 'round';
+  g.beginPath(); g.arc(50 * u, 54 * u, 22 * u, 0, 6.2832); g.stroke();
+  g.beginPath(); g.moveTo(50 * u, 54 * u); g.lineTo(50 * u, 41 * u); g.moveTo(50 * u, 54 * u); g.lineTo(60 * u, 60 * u); g.stroke();
+  [[30, 30], [70, 30]].forEach(([x, y]) => { g.beginPath(); g.arc(x * u, y * u, 8 * u, 0, 6.2832); g.fill(); });
+  return c.toDataURL('image/png');
+}
+function setupPwa() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  const manifest = {
+    name: 'Personal Smart Alarm', short_name: 'Smart Alarm', description: 'Penggera pintar dengan muzik sendiri.',
+    start_url: location.origin + location.pathname, scope: base, display: 'standalone',
+    background_color: '#050816', theme_color: '#050816', lang: settings.lang,
+    icons: [192, 512].map(s => ({ src: pwaIcon(s), sizes: `${s}x${s}`, type: 'image/png', purpose: 'any maskable' }))
+  };
+  const link = document.createElement('link'); link.rel = 'manifest';
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' }));
+  document.head.appendChild(link);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {}); // pilihan: sw.js tiada = tiada cache luar talian
+}
+const refreshInstallUi = () => $$('[data-pwa-ui]').forEach(el => el.classList.toggle('is-hidden', isStandalone()));
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwa.prompt = e; });
+window.addEventListener('appinstalled', () => { pwa.prompt = null; refreshInstallUi(); toast('Aplikasi dipasang.', 'success'); });
+document.addEventListener('click', async e => {
+  if (!e.target.closest('[data-pwa="install"]')) return;
+  if (!pwa.prompt) return toast(/^https?:$/.test(location.protocol)
+    ? 'Klik ikon pasang pada bar alamat pelayar, atau menu ⋮ → Install / Pasang aplikasi.'
+    : 'Buka melalui https:// (cth. Netlify) atau http://localhost untuk memasang aplikasi.', 'info', 9000);
+  const p = pwa.prompt; pwa.prompt = null;
+  p.prompt(); await p.userChoice.catch(() => {}); refreshInstallUi();
+});
 
 /* ============================== Events ============================== */
 document.addEventListener('click', e => {
