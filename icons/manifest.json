@@ -3,7 +3,6 @@
   "short_name": "SmartAlarm",
   "description": "Personal Smart Alarm — penggera pintar dengan muzik sendiri, berjalan sepenuhnya dalam pelayar anda.",
   "start_url": "./index.html",
-
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#050816",
