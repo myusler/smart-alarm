@@ -5,11 +5,12 @@ const PRECORE_ASSETS = [
   './manifest.json'
 ];
 
-// 1. Peringkat Install: Wajib simpan fail teras supaya pelayar web telefon meluluskan PWA
+// 1. Peringkat Install: Wajib simpan fail teras supaya pelayar web meluluskan PWA
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Menyimpan aset teras untuk kelayakan PWA mudah alih');
+      console.log('Menyimpan aset teras untuk kelayakan PWA');
+      // Guna keralatan berasingan supaya jika satu fail gagal, ia tidak merosakkan semua
       return cache.addAll(PRECORE_ASSETS);
     })
   );
@@ -27,26 +28,30 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Peringkat Fetch: Rangkaian dahulu, cache sebagai sandaran (Termasuk sokongan fail CDN)
+// 3. Peringkat Fetch: Rangkaian dahulu, cache sebagai sandaran (Telah diperbaiki)
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  // Hanya proses permintaan GET dan skema http/https (elakkan ralat chrome-extension)
+  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
 
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // Simpan atau kemas kini cache dengan respon baharu dari internet
-        if (networkResponse.status === 200 || networkResponse.type === 'opaque') {
+        // PERBAIKAN: Pastikan respon sah sebelum klon dimasukkan ke cache secara selamat
+        if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
           const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
+          // Gunakan event.waitUntil supaya pelayar tidak menutup thread sebelum cache selesai disimpan
+          event.waitUntil(
+            caches.open(CACHE_NAME).then((cache) => {
+              return cache.put(event.request, responseClone);
+            })
+          );
         }
         return networkResponse;
       })
       .catch(() => {
         // Jika offline, cuba cari fail yang sepadan dalam cache
-        return caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
-          // Jika fail spesifik tiada, pulangkan halaman utama ('./') yang disahkan ada dalam cache
+        return caches.match(event.request).then((cachedResponse) => {
+          // Jika fail spesifik tiada, pulangkan fail utama '/' sebagai sandaran
           return cachedResponse || caches.match('./');
         });
       })
