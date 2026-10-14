@@ -1,59 +1,25 @@
-const CACHE_NAME = 'psa-v1';
-const PRECORE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json'
-];
+const CACHE = 'eg-portal-v2';
 
-// 1. Peringkat Install: Wajib simpan fail teras supaya pelayar web meluluskan PWA
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Menyimpan aset teras untuk kelayakan PWA');
-      // Guna keralatan berasingan supaya jika satu fail gagal, ia tidak merosakkan semua
-      return cache.addAll(PRECORE_ASSETS);
-    })
-  );
-  self.skipWaiting();
-});
+self.addEventListener('install', () => self.skipWaiting());
 
-// 2. Peringkat Activate: Buang cache lama
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    }).then(() => self.clients.claim())
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
-// 3. Peringkat Fetch: Rangkaian dahulu, cache sebagai sandaran (Telah diperbaiki)
-self.addEventListener('fetch', (event) => {
-  // Hanya proses permintaan GET dan skema http/https (elakkan ralat chrome-extension)
-  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return;
-
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // PERBAIKAN: Pastikan respon sah sebelum klon dimasukkan ke cache secara selamat
-        if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-          const responseClone = networkResponse.clone();
-          // Gunakan event.waitUntil supaya pelayar tidak menutup thread sebelum cache selesai disimpan
-          event.waitUntil(
-            caches.open(CACHE_NAME).then((cache) => {
-              return cache.put(event.request, responseClone);
-            })
-          );
-        }
-        return networkResponse;
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== location.origin) return;
+  e.respondWith(
+    fetch(e.request)
+      .then(r => {
+        const copy = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy));
+        return r;
       })
-      .catch(() => {
-        // Jika offline, cuba cari fail yang sepadan dalam cache
-        return caches.match(event.request).then((cachedResponse) => {
-          // Jika fail spesifik tiada, pulangkan fail utama '/' sebagai sandaran
-          return cachedResponse || caches.match('./');
-        });
-      })
+      .catch(() => caches.match(e.request).then(m => m || caches.match('/index.html')))
   );
 });
