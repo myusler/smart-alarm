@@ -14,7 +14,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://NAMA-SITE-ANDA.netlify.app/icons/og-image.png">
+<meta name="twitter:image" content="https://smart-alarm-music.netlify.app/icons/og-image.png">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="description" content="Personal Smart Alarm — penggera pintar dengan muzik sendiri, berjalan sepenuhnya dalam pelayar anda.">
@@ -390,6 +390,7 @@ input[type=range]{width:100%;accent-color:var(--cyan);height:28px;cursor:pointer
             <button class="btn btn-sm" data-lib="shuffle-all"><i data-lucide="shuffle"></i>Shuffle play</button>
             <button class="btn btn-sm" data-lib="random"><i data-lucide="dices"></i>Lagu rawak</button>
             <button class="btn btn-sm" id="libAuto" data-lib="auto"><i data-lucide="infinity"></i>Main berterusan</button>
+            <button class="btn btn-sm" id="reorderBtn" data-lib="reorder" title="Tunjuk atau sembunyi pegangan seret"><span aria-hidden="true">⋮⋮</span>Susun (seret)</button>
             <button class="btn btn-sm" id="pickBtn" data-lib="pick"><i data-lucide="check-square"></i>Pilih lagu</button>
           </div>
           <div class="toolbar">
@@ -1597,6 +1598,9 @@ document.addEventListener('click', e => {
     case 'random': randomSong(); break;
     case 'play-all': playAll(false); break;
     case 'shuffle-all': playAll(true); break;
+    case 'reorder': reorderOn = !reorderOn; $('#reorderBtn').classList.toggle('btn-primary', reorderOn);
+      if (reorderOn && (lib.group !== 'none' || searchQuery())) toast('Pegangan seret hanya muncul tanpa carian dan tanpa kumpulan.', 'info', 5000);
+      renderSongList(); break;
     case 'pick': togglePick(); break;
     case 'pick-all': viewSongs().forEach(s => pick.ids.add(s.id)); refreshPick(); break;
     case 'pick-add': openBulkAdd(); break;
@@ -1621,9 +1625,10 @@ document.addEventListener('change', e => {
 /* ============================== Drag & drop reorder ============================== */
 // Susunan manual: playlist -> playlist.songIds, semua lagu -> lib.order. Pegangan hanya aktif tanpa carian/kumpulan.
 const searchQuery = () => $('#songSearch').value.trim();
+let reorderOn = true;
 function dragHandle() {
-  if (lib.group !== 'none' || searchQuery()) return '';
-  return '<button class="drag-handle" aria-label="Seret untuk susun semula (atau guna anak panah atas/bawah)" title="Seret untuk susun semula"><i data-lucide="grip-vertical"></i></button>';
+  if (!reorderOn || lib.group !== 'none' || searchQuery()) return '';
+  return '<button class="drag-handle" aria-label="Seret untuk susun semula (atau guna anak panah atas/bawah)" title="Seret untuk susun semula" style="font-size:20px;font-weight:700;letter-spacing:-3px">⋮⋮</button>';
 }
 function reorderSong(id, index) {
   const before = viewSongs().map(s => s.id), ids = before.filter(x => x !== id);
@@ -1920,6 +1925,9 @@ Pasang ke Desktop = Install to Desktop
 Pasang sebagai aplikasi dengan tetingkap sendiri (perlu https:// atau localhost) = Install as an app with its own window (requires https:// or localhost)
 Aplikasi dipasang. = App installed.
 Pilih lagu = Select songs
+Susun (seret) = Reorder (drag)
+Tunjuk atau sembunyi pegangan seret = Show or hide drag handles
+Pegangan seret hanya muncul tanpa carian dan tanpa kumpulan. = Drag handles only appear with no search and no grouping.
 Pilih semua = Select all
 Tambah ke playlist = Add to playlist
 Playlist sedia ada = Existing playlist
@@ -2397,6 +2405,7 @@ async function boot() {
   registerServiceWorker();
   refreshInstallUi();
   refreshFxButton();
+  $('#reorderBtn').classList.add('btn-primary');
   syncWake();
 }
 boot().catch(err => { console.error(err); toast('Ralat semasa memulakan aplikasi.', 'error'); });
