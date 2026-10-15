@@ -1598,9 +1598,13 @@ document.addEventListener('click', e => {
     case 'random': randomSong(); break;
     case 'play-all': playAll(false); break;
     case 'shuffle-all': playAll(true); break;
-    case 'reorder': reorderOn = !reorderOn; $('#reorderBtn').classList.toggle('btn-primary', reorderOn);
-      if (reorderOn && (lib.group !== 'none' || searchQuery())) toast('Pegangan seret hanya muncul tanpa carian dan tanpa kumpulan.', 'info', 5000);
-      renderSongList(); break;
+    case 'reorder': { const hidden = reorderOn && (lib.group !== 'none' || searchQuery()); // aktif tetapi pegangan tersembunyi: betulkan, jangan matikan
+      reorderOn = hidden || !reorderOn; $('#reorderBtn').classList.toggle('btn-primary', reorderOn); }
+      if (reorderOn && (lib.group !== 'none' || searchQuery())) { // pegangan memerlukan senarai tanpa kumpulan dan carian
+        lib.group = 'none'; $('#libGroup').value = 'none'; $('#songSearch').value = '';
+        toast('Kumpulan dan carian dimatikan supaya pegangan seret ⋮⋮ boleh digunakan.', 'info', 5000);
+      }
+      saveLib(); renderSongList(); break;
     case 'pick': togglePick(); break;
     case 'pick-all': viewSongs().forEach(s => pick.ids.add(s.id)); refreshPick(); break;
     case 'pick-add': openBulkAdd(); break;
@@ -1927,7 +1931,7 @@ Aplikasi dipasang. = App installed.
 Pilih lagu = Select songs
 Susun (seret) = Reorder (drag)
 Tunjuk atau sembunyi pegangan seret = Show or hide drag handles
-Pegangan seret hanya muncul tanpa carian dan tanpa kumpulan. = Drag handles only appear with no search and no grouping.
+Kumpulan dan carian dimatikan supaya pegangan seret ⋮⋮ boleh digunakan. = Grouping and search were turned off so the ⋮⋮ drag handles can be used.
 Pilih semua = Select all
 Tambah ke playlist = Add to playlist
 Playlist sedia ada = Existing playlist
