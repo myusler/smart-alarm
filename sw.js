@@ -1,7 +1,7 @@
 /* Service Worker — Personal Smart Alarm
    Rangkaian dahulu (sentiasa versi terkini); cache sebagai sandaran supaya app boleh dibuka tanpa internet
    selepas satu lawatan dalam talian. Naikkan nombor CACHE apabila anda mahu memaksa cache baharu. */
-const CACHE = 'psa-v2';
+const CACHE = 'psa-v3';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
