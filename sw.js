@@ -1,25 +1,34 @@
-const CACHE = 'eg-portal-v2';
+/* Service Worker — Personal Smart Alarm
+   Rangkaian dahulu (sentiasa versi terkini); cache sebagai sandaran supaya app boleh dibuka tanpa internet
+   selepas satu lawatan dalam talian. Naikkan nombor CACHE apabila anda mahu memaksa cache baharu. */
+const CACHE = 'psa-v2';
+const SHELL = ['./', 'index.html', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', e => {
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.allSettled(SHELL.map(url => c.add(url)))) // satu fail gagal tidak membatalkan pemasangan
+      .then(() => self.skipWaiting())
+  );
+});
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  if (new URL(e.request.url).origin !== location.origin) return;
+  const req = e.request;
+  if (req.method !== 'GET' || !req.url.startsWith('http')) return;
   e.respondWith(
-    fetch(e.request)
-      .then(r => {
-        const copy = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return r;
+    fetch(req)
+      .then(res => {
+        if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        return res;
       })
-      .catch(() => caches.match(e.request).then(m => m || caches.match('/index.html')))
+      .catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match('index.html')))
   );
 });
